@@ -31,7 +31,7 @@ interface InternalConfig extends Required<Omit<ArchLensConfig, 'rules'>> {
 }
 
 const DEFAULT_TARGET_GLOB = '**/*.{ts,tsx,js,jsx}';
-const GLOB_CHAR_PATTERN = /[\*\?\[\]\{\}\(\)\!]/;
+const GLOB_CHAR_PATTERN = /[[\]{}()!*?]/;
 
 function hasGlobCharacters(value: string): boolean {
   return GLOB_CHAR_PATTERN.test(value);
