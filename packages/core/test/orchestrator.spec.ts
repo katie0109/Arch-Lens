@@ -55,7 +55,7 @@ describe('ArchLensOrchestrator report adapter', () => {
 
     const result = await orchestrator.scan({ fix: true, reportFormat: 'json' });
 
-    expect(result).toEqual([]);
+    expect(result.violations).toEqual([]);
     expect(reportSpy).toHaveBeenCalled();
 
     const [firstCall] = reportSpy.mock.calls;

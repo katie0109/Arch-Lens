@@ -26,8 +26,8 @@ describe('dependency/no-cross-layer', () => {
     const rule = createNoCrossLayerRule({
       layers: [
         { name: 'app', pattern: '^src/app/' },
-        { name: 'features', pattern: '^src/features/' , canImport: ['shared'] },
-        { name: 'shared', pattern: '^src/shared/' , canImport: ['shared'] },
+        { name: 'features', pattern: '^src/features/', canImport: [] },
+        { name: 'shared', pattern: '^src/shared/', canImport: ['shared'] },
       ],
     });
 

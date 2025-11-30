@@ -21,7 +21,7 @@ export interface ScanCommandOptions {
   metrics?: string;
 }
 
-function normalizeReportMode(mode: string | undefined): ReportMode {
+export function normalizeReportMode(mode: string | undefined): ReportMode {
   if (!mode) {
     return 'table';
   }

@@ -92,7 +92,7 @@ export function createFilenameCaseRule(options?: FilenameCaseRuleOptions): ArchL
             message: `Filename "${parsed.base}" should be "${targetName}" (${entry.style}).`,
             file: filePath,
             fixable: true,
-            suggestedFix: `Rename the file to ${targetName}.`,
+            suggestedFix: `Rename the file to ${targetName} (${entry.style}).`,
           });
         }
       }
