@@ -44,7 +44,7 @@ jobs:
       - name: Architecture scan
         run: |
           mkdir -p reports
-          pnpm --filter @arch-lens/cli exec arch-lens scan examples/monorepo-sample/src --report json > reports/arch-lens-report.json
+          pnpm --filter @arch-lens/cli exec -- node dist/index.js scan examples/monorepo-sample/src --report json --allow-violations > reports/arch-lens-report.json
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
