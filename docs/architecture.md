@@ -64,11 +64,6 @@ Arch-Lens는 **CLI → Core Engine → Rules/Plugins → Reporter** 흐름으로
 - `DependencyGraphCache`는 전달된 파일의 AST만 다시 파싱하고, 나머지 그래프는 재사용해 재실행 속도를 높입니다.
 - watch 모드에서도 위반 여부에 따라 exit code를 유지하므로 CI/로컬 모두 일관된 피드백을 제공합니다.
 
-### 6.1 이벤트 디바운싱 & 로그
-
-- 빠른 파일 저장이 연속으로 발생할 때를 대비해 이벤트를 200ms 동안 모아 한 번에 재스캔합니다.
-- 콘솔 로그는 `Re-scanning after changes: ...` 형식으로 변경 파일을 보여주어 디버깅이 쉽습니다.
-
 ---
 
 ## 7. 실행 메트릭
