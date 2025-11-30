@@ -19,6 +19,7 @@ export interface ScanCommandOptions {
   pretty?: boolean;
   watch?: boolean;
   metrics?: string;
+  allowViolations?: boolean;
 }
 
 export function normalizeReportMode(mode: string | undefined): ReportMode {
@@ -48,6 +49,26 @@ function normalizePluginOption(option: string | string[] | undefined): string[] 
     .flatMap((value) => value.split(','))
     .map((value) => value.trim())
     .filter((value) => value.length > 0);
+}
+
+export function shouldFailScan({
+  watchMode,
+  failOnViolations,
+  violationCount,
+}: {
+  watchMode: boolean;
+  failOnViolations: boolean;
+  violationCount: number;
+}): boolean {
+  if (watchMode) {
+    return violationCount > 0;
+  }
+
+  if (!failOnViolations) {
+    return false;
+  }
+
+  return violationCount > 0;
 }
 
 async function emitMetrics(path: string, result: {
@@ -87,6 +108,7 @@ export function registerScanCommand(cli: CAC): void {
     .option('--pretty', 'Pretty-print JSON output')
     .option('--watch', 'Watch for file changes and re-run the scan')
     .option('--metrics <path>', 'Write scan metrics summary JSON to the provided file path')
+    .option('--allow-violations', 'Exit with code 0 even if violations are found (non-watch mode)')
     .action(async (target: string | undefined, options: ScanCommandOptions) => {
       try {
         const reportMode = normalizeReportMode(options.report);
@@ -108,6 +130,7 @@ export function registerScanCommand(cli: CAC): void {
         });
 
         const watchMode = Boolean(options.watch);
+        const failOnViolations = !options.allowViolations;
         const metricsPath = options.metrics ? resolve(process.cwd(), options.metrics) : undefined;
 
         const runScan = async (changedFiles?: string[]): Promise<void> => {
@@ -124,13 +147,13 @@ export function registerScanCommand(cli: CAC): void {
             await emitMetrics(metricsPath, result);
           }
 
-          if (!watchMode && result.violations.length > 0) {
-            process.exitCode = 1;
-          } else if (!watchMode) {
-            process.exitCode = 0;
-          } else {
-            process.exitCode = result.violations.length > 0 ? 1 : 0;
-          }
+          const failScan = shouldFailScan({
+            watchMode,
+            failOnViolations,
+            violationCount: result.violations.length,
+          });
+
+          process.exitCode = failScan ? 1 : 0;
         };
 
         await runScan();

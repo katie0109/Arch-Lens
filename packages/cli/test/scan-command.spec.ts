@@ -19,7 +19,7 @@ vi.mock('../src/utils/rule-loader.js', () => ({
   gatherRules: vi.fn(async () => []),
 }));
 
-import { registerScanCommand, normalizeReportMode } from '../src/commands/scan.js';
+import { registerScanCommand, normalizeReportMode, shouldFailScan } from '../src/commands/scan.js';
 
 describe('scan command', () => {
   afterEach(() => {
@@ -39,5 +39,20 @@ describe('scan command', () => {
 
     // 옵션 정규화가 기대대로 동작하는지 확인
     expect(normalizeReportMode('list')).toBe('list');
+  });
+
+  it('decides whether a scan should fail based on flags', () => {
+    expect(
+      shouldFailScan({ watchMode: false, failOnViolations: true, violationCount: 2 }),
+    ).toBe(true);
+    expect(
+      shouldFailScan({ watchMode: false, failOnViolations: false, violationCount: 5 }),
+    ).toBe(false);
+    expect(
+      shouldFailScan({ watchMode: true, failOnViolations: true, violationCount: 0 }),
+    ).toBe(false);
+    expect(
+      shouldFailScan({ watchMode: true, failOnViolations: true, violationCount: 1 }),
+    ).toBe(true);
   });
 });

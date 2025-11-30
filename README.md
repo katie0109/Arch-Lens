@@ -119,6 +119,20 @@ export default config;
 - 샘플 규칙/플러그인을 수정했다면 반드시 README·Docs·CHANGELOG를 함께 업데이트합니다.
 - 저장소 전체 빌드: `pnpm build`. 특정 패키지 빌드: `pnpm --filter <pkg> run build`.
 
+### 샘플 리포트(JSON) 만들기
+
+CI와 동일한 JSON 리포트를 로컬에서도 보고 싶다면 아래 순서를 따르면 됩니다.
+
+```bash
+pnpm --filter @arch-lens/cli run build
+node packages/cli/dist/index.js scan examples/monorepo-sample/src \
+  --report json --allow-violations > reports/arch-lens-report.json
+```
+
+> Windows PowerShell에서는 `pnpm --filter @arch-lens/cli exec -- arch-lens ...`처럼 바로 실행하면 `arch-lens` 명령을 찾지 못할 수 있으니, 위와 같이 `node dist/index.js` 경로를 직접 실행하거나 `pnpm --filter @arch-lens/cli exec -- node dist/index.js ...` 형태로 실행해주세요.
+
+- 저장소 전체 빌드: `pnpm build`. 특정 패키지 빌드: `pnpm --filter <pkg> run build`.
+
 워크플로 구조는 아래와 같으며, 세부 사항은 [`docs/architecture.md`](./docs/architecture.md)를 참고하세요.
 
 ```
