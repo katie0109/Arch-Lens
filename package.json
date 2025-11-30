@@ -1,0 +1,33 @@
+{
+  "name": "arch-lens-monorepo",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Arch-Lens monorepo workspace for CLI, core engine, rules, and plugins.",
+  "license": "MIT",
+  "packageManager": "pnpm@8.15.4",
+  "scripts": {
+    "build": "pnpm -r run build",
+    "lint": "pnpm -r run lint",
+    "test": "pnpm -r run test",
+    "typecheck": "pnpm -r run typecheck",
+    "coverage": "vitest --run --coverage",
+    "release": "bash scripts/release.sh",
+    "clean": "pnpm -r run clean"
+  },
+  "devDependencies": {
+    "@arch-lens/plugins": "workspace:*",
+    "@arch-lens/core": "workspace:*",
+    "@arch-lens/rules": "workspace:*",
+    "@types/node": "^20.11.30",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.57.0",
+    "eslint-config-prettier": "^9.1.0",
+    "eslint-import-resolver-typescript": "^4.4.4",
+    "eslint-plugin-import": "^2.29.1",
+    "prettier": "^3.3.3",
+    "rimraf": "^5.0.5",
+    "typescript": "^5.4.0",
+    "vitest": "^1.2.2"
+  }
+}

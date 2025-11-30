@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "types": ["node", "vitest/globals"],
+    "typeRoots": ["./node_modules/@types", "./node_modules"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true,
+    "baseUrl": ".",
+    "paths": {
+      "@arch-lens/plugins": ["packages/plugins/src/index.ts"],
+      "@arch-lens/plugins/*": ["packages/plugins/src/*"],
+      "@arch-lens/*": ["packages/*/src"]
+    }
+  }
+}
