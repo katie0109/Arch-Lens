@@ -1,8 +1,7 @@
-import { createArchLensOrchestrator } from '@arch-lens/core';
+import { initializeProject } from '@arch-lens/core';
 import type { CAC } from 'cac';
 
 import { handleCliError } from '../utils/error-handling.js';
-import { gatherRules } from '../utils/rule-loader.js';
 
 export interface InitCommandOptions {
   force?: boolean;
@@ -18,17 +17,9 @@ export function registerInitCommand(cli: CAC): void {
     .option('--template <name>', 'Name of a configuration template to scaffold (future use)')
     .action(async (options: InitCommandOptions) => {
       try {
-        const rules = await gatherRules();
-
-        const orchestrator = await createArchLensOrchestrator({
+        const result = await initializeProject({
           configPath: options.config,
-          rules,
-        });
-
-        const result = await orchestrator.init({
           force: Boolean(options.force),
-          configPath: options.config,
-          template: options.template,
         });
 
         if (result.scaffolded) {
