@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { join } from 'node:path';
-import { mkdtemp, rm, writeFile, mkdir, stat } from 'node:fs/promises';
+import { mkdtemp, rm, writeFile, mkdir, stat, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 
 import {
@@ -50,6 +50,54 @@ describe('requiredFeatureIndexRule', () => {
       file: 'src/features/Cart/index.ts',
       fixable: true,
     });
+  });
+
+  it('does not treat a file directly under features/ as a feature', async () => {
+    // src/features/index.ts is a barrel file, not a feature -> no violation, and definitely
+    // not a bogus "src/features/index.ts/index.ts" entry.
+    const context = createContext(workspace, ['src/features/index.ts']);
+    const result = await requiredFeatureIndexRule.check(context);
+
+    expect(result).toHaveLength(0);
+  });
+
+  it('creates an index.ts whose content does not itself trip TODO-style rules', async () => {
+    await writeFile(
+      join(workspace, 'src/features/Cart/cart-service.ts'),
+      "export const checkout = () => 'ok';\n",
+      'utf8',
+    );
+
+    const context: RuleContext = {
+      ...createContext(workspace, ['src/features/Cart/cart-service.ts']),
+      fix: true,
+    };
+
+    await requiredFeatureIndexRule.fix?.(context);
+    const created = await readFile(join(workspace, 'src/features/Cart/index.ts'), 'utf8');
+
+    expect(created).not.toMatch(/TODO|FIXME/);
+  });
+
+  it('is idempotent: running fix twice does not throw or rewrite', async () => {
+    await writeFile(
+      join(workspace, 'src/features/Cart/cart-service.ts'),
+      "export const checkout = () => 'ok';\n",
+      'utf8',
+    );
+
+    const context: RuleContext = {
+      ...createContext(workspace, ['src/features/Cart/cart-service.ts']),
+      fix: true,
+    };
+
+    await requiredFeatureIndexRule.fix?.(context);
+    const first = await readFile(join(workspace, 'src/features/Cart/index.ts'), 'utf8');
+
+    await expect(requiredFeatureIndexRule.fix?.(context)).resolves.not.toThrow();
+    const second = await readFile(join(workspace, 'src/features/Cart/index.ts'), 'utf8');
+
+    expect(second).toBe(first);
   });
 
   it('passes when index.ts exists', async () => {
