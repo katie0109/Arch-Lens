@@ -1,33 +1,44 @@
 import { stat } from 'node:fs/promises';
-import { isAbsolute, relative, resolve } from 'node:path';
+import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 
 import type { ArchLensRule, RuleViolation } from '@arch-lens/rules';
+import { loadBuiltInRules } from '@arch-lens/rules';
 
-import { loadArchLensConfig } from '../config/load-config.js';
-import { scaffoldConfig } from '../config/scaffold-config.js';
+import { tryLoadArchLensConfig } from '../config/load-config.js';
 import { scanWorkspaceFiles } from '../fs/file-scanner.js';
 import { DependencyGraphCache } from '../parser/dependency-graph-cache.js';
 import { buildDependencyGraph, createDefaultResolver } from '../parser/ts-dependency-graph.js';
 import { reportViolations } from '../reporter/console-reporter.js';
 import type {
   ArchLensConfig,
-  InitOptions,
-  InitResult,
   ReportFormat,
   ScanOptions,
   ScanResult,
 } from '../types.js';
 
+import { resolveRules } from './resolve-rules.js';
+
 export interface ArchLensOrchestratorOptions {
   cwd?: string;
-  rules?: ArchLensRule[];
+  /** Inline config object (no config file on disk). */
   config?: ArchLensConfig;
+  /** Explicit config file path; a missing explicit path is an error. */
   configPath?: string;
+  /** Base rules used only when no config declares rules. Defaults to the built-in rules. */
+  defaultRules?: ArchLensRule[];
+  /** Rules contributed by `--plugin`, always appended. */
+  pluginRules?: ArchLensRule[];
 }
 
 interface InternalConfig extends Required<Omit<ArchLensConfig, 'rules'>> {
   rules: ArchLensRule[];
+}
+
+interface WorkspaceAnalysis {
+  violations: RuleViolation[];
+  files: string[];
+  dependencyGraph: Awaited<ReturnType<typeof buildDependencyGraph>>;
 }
 
 const DEFAULT_TARGET_GLOB = '**/*.{ts,tsx,js,jsx}';
@@ -95,21 +106,6 @@ async function deriveTargetInclude(root: string, target: string): Promise<string
   return [cleaned];
 }
 
-function mergeRules(
-  baseRules: ArchLensRule[] | undefined,
-  extraRules: ArchLensRule[] | undefined,
-): ArchLensRule[] {
-  if (!extraRules || extraRules.length === 0) {
-    return baseRules ?? [];
-  }
-
-  if (!baseRules || baseRules.length === 0) {
-    return extraRules;
-  }
-
-  return [...baseRules, ...extraRules];
-}
-
 export class ArchLensOrchestrator {
   private readonly cwd: string;
   private readonly config: InternalConfig;
@@ -131,28 +127,45 @@ export class ArchLensOrchestrator {
 
   static async bootstrap(options: ArchLensOrchestratorOptions = {}): Promise<ArchLensOrchestrator> {
     const cwd = resolve(options.cwd ?? process.cwd());
+    const pluginRules = options.pluginRules ?? [];
+    const defaultRules = options.defaultRules ?? loadBuiltInRules();
 
+    // Inline config: it owns its rules; built-ins are not implicitly merged.
     if (options.config) {
-      const mergedConfig = {
-        ...options.config,
-        rules: mergeRules(options.config.rules, options.rules),
-      };
-      return new ArchLensOrchestrator(cwd, mergedConfig);
+      const rules = resolveRules({
+        configRules: options.config.rules,
+        defaultRules,
+        pluginRules,
+      });
+      return new ArchLensOrchestrator(cwd, { ...options.config, rules });
     }
 
-    const { config } = await loadArchLensConfig(cwd, options.configPath);
+    const loaded = await tryLoadArchLensConfig(cwd, options.configPath);
 
-    return new ArchLensOrchestrator(cwd, {
-      ...config,
-      rules: mergeRules(config.rules, options.rules),
-    });
+    // A config file (explicit or auto-discovered) owns the rule set.
+    if (loaded) {
+      // When a config omits `root`, anchor scanning to the config file's directory rather
+      // than the current working directory, so results are stable regardless of where the
+      // CLI is invoked from.
+      const root = loaded.config.root ?? dirname(loaded.configPath);
+      const rules = resolveRules({
+        configRules: loaded.config.rules,
+        defaultRules,
+        pluginRules,
+      });
+      return new ArchLensOrchestrator(cwd, { ...loaded.config, root, rules });
+    }
+
+    // No config anywhere: fall back to built-in defaults plus any plugin rules.
+    const rules = resolveRules({ defaultRules, pluginRules });
+    return new ArchLensOrchestrator(cwd, { root: cwd, rules });
   }
 
   async scan(options: ScanOptions = {}): Promise<ScanResult> {
     const start = performance.now();
-    const include = options.target
-      ? await deriveTargetInclude(this.config.root, options.target)
-      : this.config.include;
+    const reportFormat: ReportFormat = options.reportFormat ?? 'table';
+
+    // Watch mode passes the files that changed since the last run.
     const absoluteChanged = options.changedFiles?.map((file) =>
       resolve(this.config.root, file),
     );
@@ -160,6 +173,37 @@ export class ArchLensOrchestrator {
     if (absoluteChanged && absoluteChanged.length > 0) {
       this.dependencyCache.invalidate(absoluteChanged);
     }
+
+    // Detection pass: collect violations without printing anything.
+    let analysis = await this.analyze(options);
+
+    if (options.fix) {
+      await this.applyFixes(analysis, options);
+      // Fixes may create or modify files, so drop the whole cache and re-analyze. The
+      // reported result must reflect what remains AFTER fixing, not the pre-fix state.
+      this.dependencyCache.invalidate();
+      analysis = await this.analyze(options);
+    }
+
+    // Reporter runs exactly once, at the very end, on stdout.
+    reportViolations(analysis.violations, { format: reportFormat, pretty: options.pretty });
+
+    return {
+      violations: analysis.violations,
+      files: analysis.files,
+      durationMs: performance.now() - start,
+    };
+  }
+
+  /**
+   * Runs every rule's `check()` and gathers violations into a collector. Nothing is printed
+   * here; `context.report()` appends to the same collector so a single reporter call at the
+   * end of {@link scan} owns all output.
+   */
+  private async analyze(options: ScanOptions): Promise<WorkspaceAnalysis> {
+    const include = options.target
+      ? await deriveTargetInclude(this.config.root, options.target)
+      : this.config.include;
 
     const files = await scanWorkspaceFiles({
       cwd: this.config.root,
@@ -174,55 +218,50 @@ export class ArchLensOrchestrator {
     });
 
     const violations: RuleViolation[] = [];
-
-    const reportFormat: ReportFormat = options.reportFormat ?? 'table';
-    const reporter = (payload: RuleViolation | RuleViolation[]): void => {
-      const items = Array.isArray(payload) ? payload : [payload];
-      reportViolations(items, { format: reportFormat, pretty: options.pretty });
+    const collect = (payload: RuleViolation | RuleViolation[]): void => {
+      violations.push(...(Array.isArray(payload) ? payload : [payload]));
     };
 
     for (const rule of this.config.rules) {
       const context = {
         root: this.config.root,
         files,
-        fix: Boolean(options.fix),
+        fix: false,
         verbose: Boolean(options.verbose),
         dependencyGraph,
-        report: reporter,
+        report: collect,
       };
 
-      const ruleViolations = await rule.check(context);
-      violations.push(...ruleViolations);
-
-      if (context.fix && typeof rule.fix === 'function') {
-        await rule.fix(context);
-      }
+      violations.push(...(await rule.check(context)));
     }
 
-    reportViolations(violations, { format: reportFormat, pretty: options.pretty });
-
-    const durationMs = performance.now() - start;
-
-    return {
-      violations,
-      files,
-      durationMs,
-    };
+    return { violations, files, dependencyGraph };
   }
 
-  async init(options: InitOptions = {}): Promise<InitResult> {
-    const { path: configPath, scaffolded, backupPath } = await scaffoldConfig({
-      cwd: this.cwd,
-      targetPath: options.configPath,
-      force: Boolean(options.force),
-      include: this.config.include,
-      exclude: this.config.exclude,
-      template: options.template,
-    });
+  /**
+   * Applies each fixable rule's `fix()`. Any `context.report()` calls made during fixing are
+   * intentionally discarded: the post-fix re-analysis is the single source of truth for the
+   * violations that actually remain.
+   */
+  private async applyFixes(analysis: WorkspaceAnalysis, options: ScanOptions): Promise<void> {
+    const discard = (): void => {
+      /* fix-phase diagnostics are superseded by the re-analysis */
+    };
 
-    const loaded = await loadArchLensConfig(this.cwd, configPath);
+    for (const rule of this.config.rules) {
+      if (typeof rule.fix !== 'function') {
+        continue;
+      }
 
-    return { ...loaded, scaffolded, backupPath };
+      await rule.fix({
+        root: this.config.root,
+        files: analysis.files,
+        fix: true,
+        verbose: Boolean(options.verbose),
+        dependencyGraph: analysis.dependencyGraph,
+        report: discard,
+      });
+    }
   }
 
   getScanPatterns(): { root: string; include: string[]; exclude: string[] } {
@@ -237,23 +276,7 @@ export class ArchLensOrchestrator {
 export async function createArchLensOrchestrator(
   options: ArchLensOrchestratorOptions = {},
 ): Promise<ArchLensOrchestrator> {
-  try {
-    return await ArchLensOrchestrator.bootstrap(options);
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-
-    if (options.config || options.configPath) {
-      throw error;
-    }
-
-    if (options.rules && message.includes('configuration file not found')) {
-      const cwd = resolve(options.cwd ?? process.cwd());
-      return ArchLensOrchestrator.fromConfig(cwd, {
-        root: cwd,
-        rules: options.rules,
-      });
-    }
-
-    throw error;
-  }
+  // Bootstrap now handles the no-config case directly (falling back to built-in defaults),
+  // so no special-case error recovery is needed here.
+  return ArchLensOrchestrator.bootstrap(options);
 }
