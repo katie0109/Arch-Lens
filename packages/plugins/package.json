@@ -24,7 +24,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "clean": "rimraf dist",
     "lint": "eslint \"src/**/*.ts\"",
-    "test": "vitest run --passWithNoTests",
+    "test": "vitest run plugins",
     "prepublishOnly": "pnpm run build"
   },
   "devDependencies": {
