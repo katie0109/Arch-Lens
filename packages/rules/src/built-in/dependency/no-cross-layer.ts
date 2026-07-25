@@ -12,18 +12,22 @@ export interface NoCrossLayerRuleOptions {
   layers?: LayerConfig[];
 }
 
+// Classic layered architecture: a layer may import its own layer and the layers "below" it.
 const DEFAULT_LAYERS: LayerConfig[] = [
-  { name: 'app', pattern: '^src/app/' },
-  { name: 'features', pattern: '^src/features/' },
-  { name: 'shared', pattern: '^src/shared/' },
+  { name: 'app', pattern: '^src/app/', canImport: ['app', 'features', 'shared'] },
+  { name: 'features', pattern: '^src/features/', canImport: ['features', 'shared'] },
+  { name: 'shared', pattern: '^src/shared/', canImport: ['shared'] },
 ];
 
 function normaliseOptions(options?: NoCrossLayerRuleOptions): LayerConfig[] {
   const layers = options?.layers ?? DEFAULT_LAYERS;
 
+  // When a layer omits canImport, default to "own layer only". The previous default was
+  // "every other layer except self", which inverted the intent: it blocked same-layer
+  // imports and allowed all cross-layer imports.
   return layers.map((layer) => ({
     ...layer,
-    canImport: layer.canImport ?? layers.map((l) => l.name).filter((name) => name !== layer.name),
+    canImport: layer.canImport ?? [layer.name],
   }));
 }
 

@@ -25,6 +25,13 @@ function getFeatureRoot(filePath: string): string | null {
     return null;
   }
 
+  // The feature name must be a directory that contains this file, i.e. there must be at
+  // least one more path segment after it. This excludes files that sit directly under
+  // `features/` (e.g. `src/features/index.ts`), which are not features themselves.
+  if (featureIndex + 2 >= segments.length) {
+    return null;
+  }
+
   return path.posix.join(FEATURE_ROOT, featureName);
 }
 
@@ -67,8 +74,9 @@ function findMissingEntries(files: string[]): RuleViolation[] {
 
 async function scaffoldEntryFile(root: string, featureDir: string): Promise<void> {
   const filePath = path.join(root, featureDir, REQUIRED_ENTRY);
-  const banner = '/**\n * Arch-Lens가 자동 생성한 파일입니다.\n * 이 기능의 공개 API를 정의하세요.\n */\n';
-  const content = `${banner}export {};// TODO: 이 기능의 모듈을 export 하세요\n`;
+  const banner =
+    '/**\n * Arch-Lens가 자동 생성한 파일입니다.\n * 이 기능의 공개 API를 여기에서 export 하세요.\n */\n';
+  const content = `${banner}export {};\n`;
 
   await writeFile(filePath, content, { encoding: 'utf8', flag: 'wx' });
 }
