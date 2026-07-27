@@ -11,4 +11,4 @@ if [ ! -f "$CLI_BIN" ]; then
 fi
 
 echo "[Arch-Lens] Running circular dependency demo"
-node "$CLI_BIN" scan "${ROOT_DIR}/src" --config "$CONFIG_PATH" --report table "$@"
+node "$CLI_BIN" scan "${ROOT_DIR}/src" --config "$CONFIG_PATH" --report table --allow-violations "$@"

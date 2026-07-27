@@ -1,7 +1,6 @@
 import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import { loadBuiltInRules } from '@arch-lens/rules';
 import type { ArchLensRule } from '@arch-lens/rules';
 
 interface PluginModule<Rule extends ArchLensRule = ArchLensRule> {
@@ -14,15 +13,9 @@ interface PluginModule<Rule extends ArchLensRule = ArchLensRule> {
   rules: Rule[];
 }
 
-function toArray(value: string | string[] | undefined): string[] {
-  if (!value) {
-    return [];
-  }
-
-  return Array.isArray(value) ? value : [value];
-}
-
-async function loadPluginRules(pluginPath: string): Promise<ArchLensRule[]> {
+async function loadPluginModule(pluginPath: string): Promise<ArchLensRule[]> {
+  // NOTE: only local file paths are supported for now. Bare npm package specifiers
+  // (e.g. "@scope/my-plugin") are a v0.2 concern.
   const absolutePath = resolve(process.cwd(), pluginPath);
   const moduleUrl = pathToFileURL(absolutePath).href;
   const imported = await import(moduleUrl);
@@ -36,20 +29,12 @@ async function loadPluginRules(pluginPath: string): Promise<ArchLensRule[]> {
   return plugin.rules;
 }
 
-export interface LoadRulesOptions {
-  plugin?: string | string[];
-  includeBuiltIn?: boolean;
-}
-
-export async function gatherRules(options: LoadRulesOptions = {}): Promise<ArchLensRule[]> {
-  const { includeBuiltIn = true } = options;
-  const builtIn = includeBuiltIn ? loadBuiltInRules() : [];
-  const pluginPaths = toArray(options.plugin);
-
+/** Loads the rules contributed by `--plugin` paths. Built-in rules are provided by core. */
+export async function loadPluginRules(pluginPaths: string[]): Promise<ArchLensRule[]> {
   if (pluginPaths.length === 0) {
-    return builtIn;
+    return [];
   }
 
-  const pluginRuleSets = await Promise.all(pluginPaths.map(loadPluginRules));
-  return [...builtIn, ...pluginRuleSets.flat()];
+  const pluginRuleSets = await Promise.all(pluginPaths.map(loadPluginModule));
+  return pluginRuleSets.flat();
 }
