@@ -7,9 +7,14 @@ on:
   pull_request:
 
 jobs:
-  quality:
-    name: Lint, Type Check, and Test
+  verify:
+    name: Verify (Node ${{ matrix.node }})
     runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        node: [20, 22]
 
     steps:
       - name: Checkout repository
@@ -23,7 +28,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: ${{ matrix.node }}
           cache: 'pnpm'
 
       - name: Install dependencies
@@ -38,8 +43,11 @@ jobs:
       - name: Type check
         run: pnpm typecheck
 
-      - name: Test (with coverage)
+      - name: Test with coverage (builds run first, so CLI E2E hits the built binary)
         run: pnpm coverage
+
+      - name: Consumer smoke test (packed tarballs installed into a clean project)
+        run: bash scripts/consumer-smoke.sh
 
       - name: Architecture scan
         run: |
@@ -47,6 +55,7 @@ jobs:
           pnpm --filter @arch-lens/cli exec -- node dist/index.js scan examples/monorepo-sample/src --report json --allow-violations > reports/arch-lens-report.json
 
       - name: Upload coverage artifact
+        if: matrix.node == 20
         uses: actions/upload-artifact@v4
         with:
           name: coverage
@@ -54,6 +63,7 @@ jobs:
           if-no-files-found: warn
 
       - name: Upload arch-lens report
+        if: matrix.node == 20
         uses: actions/upload-artifact@v4
         with:
           name: arch-lens-report
