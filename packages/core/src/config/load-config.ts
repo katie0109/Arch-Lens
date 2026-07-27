@@ -1,13 +1,13 @@
 import { constants } from 'node:fs';
 import { access, readFile } from 'node:fs/promises';
-import { createRequire } from 'node:module';
-import { dirname, extname, resolve } from 'node:path';
+import { extname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import vm from 'node:vm';
 
-import * as ts from 'typescript';
+import { createJiti } from 'jiti';
 
-import type { ArchLensConfig, LoadedConfig } from '../types.js';
+import type { LoadedConfig } from '../types.js';
+
+import { validateConfig } from './validate-config.js';
 
 const CONFIG_CANDIDATES = [
   'arch.config.ts',
@@ -18,6 +18,12 @@ const CONFIG_CANDIDATES = [
   'arch.config.json',
 ];
 
+/**
+ * A single jiti instance handles TypeScript config files (.ts/.mts/.cts) with its own
+ * bundled transpiler, so config loading never depends on the consumer's TypeScript version.
+ */
+const jiti = createJiti(import.meta.url, { interopDefault: true });
+
 async function fileExists(path: string): Promise<boolean> {
   try {
     await access(path, constants.F_OK);
@@ -25,6 +31,19 @@ async function fileExists(path: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+/** Returns the first matching auto-discovered config path, or null when none exist. */
+async function discoverConfigPath(cwd: string): Promise<string | null> {
+  for (const candidate of CONFIG_CANDIDATES) {
+    const fullPath = resolve(cwd, candidate);
+
+    if (await fileExists(fullPath)) {
+      return fullPath;
+    }
+  }
+
+  return null;
 }
 
 async function resolveConfigPath(cwd: string, explicitPath?: string): Promise<string> {
@@ -38,12 +57,10 @@ async function resolveConfigPath(cwd: string, explicitPath?: string): Promise<st
     return resolved;
   }
 
-  for (const candidate of CONFIG_CANDIDATES) {
-    const fullPath = resolve(cwd, candidate);
+  const discovered = await discoverConfigPath(cwd);
 
-    if (await fileExists(fullPath)) {
-      return fullPath;
-    }
+  if (discovered) {
+    return discovered;
   }
 
   throw new Error(
@@ -51,62 +68,34 @@ async function resolveConfigPath(cwd: string, explicitPath?: string): Promise<st
   );
 }
 
-async function loadConfigModule(configPath: string): Promise<ArchLensConfig> {
-  const extension = extname(configPath);
-
-  if (extension === '.ts' || extension === '.mts') {
-    return loadTypeScriptConfig(configPath);
-  }
-
-  if (extension === '.json') {
-    const raw = await readFile(configPath, 'utf8');
-    return JSON.parse(raw) as ArchLensConfig;
-  }
-
-  const module = await import(pathToFileURL(configPath).href);
-  const config = (module.default ?? module) as ArchLensConfig;
-
-  if (!config) {
+function unwrapConfig(value: unknown, configPath: string): unknown {
+  if (value === null || value === undefined) {
     throw new Error(`Configuration file at ${configPath} does not export a config object.`);
   }
 
-  return config;
+  return value;
 }
 
-async function loadTypeScriptConfig(configPath: string): Promise<ArchLensConfig> {
-  const source = await readFile(configPath, 'utf8');
-  const transpiled = ts.transpileModule(source, {
-    compilerOptions: {
-      module: ts.ModuleKind.CommonJS,
-      target: ts.ScriptTarget.ES2020,
-      esModuleInterop: true,
-    },
-    fileName: configPath,
-  });
+async function loadConfigModule(configPath: string): Promise<unknown> {
+  const extension = extname(configPath);
 
-  const sandboxModule = { exports: {} as Record<string, unknown> };
-  const sandbox = {
-    module: sandboxModule,
-    exports: sandboxModule.exports,
-    __dirname: dirname(configPath),
-    __filename: configPath,
-    require: createRequire(configPath),
-    process,
-    console,
-    Buffer,
-    global,
-  };
-
-  vm.runInNewContext(transpiled.outputText, sandbox, { filename: configPath });
-
-  const exported = sandbox.module.exports ?? sandbox.exports;
-  const config = (exported?.default ?? exported) as ArchLensConfig | undefined;
-
-  if (!config) {
-    throw new Error(`TypeScript config at ${configPath} did not export a default ArchLensConfig.`);
+  if (extension === '.json') {
+    const raw = await readFile(configPath, 'utf8');
+    return JSON.parse(raw);
   }
 
-  return config;
+  if (extension === '.ts' || extension === '.mts' || extension === '.cts') {
+    // jiti transpiles + evaluates TypeScript and returns the default export (interopDefault).
+    const exported = await jiti.import(configPath, { default: true });
+    return unwrapConfig(exported, configPath);
+  }
+
+  // .mjs / .cjs / .js are loaded through Node's native ESM/CJS interop.
+  const imported = (await import(pathToFileURL(configPath).href)) as {
+    default?: unknown;
+  } & Record<string, unknown>;
+
+  return unwrapConfig(imported.default ?? imported, configPath);
 }
 
 export async function loadArchLensConfig(
@@ -116,5 +105,28 @@ export async function loadArchLensConfig(
   const configPath = await resolveConfigPath(cwd, explicitPath);
   const config = await loadConfigModule(configPath);
 
+  validateConfig(config, configPath);
+
   return { configPath, config };
+}
+
+/**
+ * Loads a config the way a scan does: an explicit path that is missing is an error, but a
+ * plain auto-discovery miss returns null so the caller can fall back to default rules.
+ */
+export async function tryLoadArchLensConfig(
+  cwd: string,
+  explicitPath?: string,
+): Promise<LoadedConfig | null> {
+  if (explicitPath) {
+    return loadArchLensConfig(cwd, explicitPath);
+  }
+
+  const discovered = await discoverConfigPath(cwd);
+
+  if (!discovered) {
+    return null;
+  }
+
+  return loadArchLensConfig(cwd, discovered);
 }

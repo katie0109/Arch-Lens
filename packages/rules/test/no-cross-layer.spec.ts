@@ -53,4 +53,40 @@ describe('dependency/no-cross-layer', () => {
     expect(violations).toHaveLength(1);
     expect(violations[0].ruleId).toBe('dependency/no-cross-layer');
   });
+
+  it('uses layered defaults: lower layers cannot import higher ones', async () => {
+    const rule = createNoCrossLayerRule(); // default app -> features -> shared
+    const root = '/proj';
+
+    const violations = await rule.check({
+      root,
+      files: [],
+      fix: false,
+      verbose: false,
+      dependencyGraph: new Map([
+        // features -> app is forbidden (features may not reach up into app)
+        [
+          'src/features/Cart/service.ts',
+          [{ specifier: '@/app/x', isTypeOnly: false, resolved: '/proj/src/app/x.ts' }],
+        ],
+        // features -> shared is allowed
+        [
+          'src/features/Cart/util.ts',
+          [{ specifier: '@/shared/u', isTypeOnly: false, resolved: '/proj/src/shared/u.ts' }],
+        ],
+        // app -> features is allowed, and same-layer imports are always allowed
+        [
+          'src/app/main.ts',
+          [
+            { specifier: '@/features/Cart', isTypeOnly: false, resolved: '/proj/src/features/Cart/index.ts' },
+            { specifier: '@/app/other', isTypeOnly: false, resolved: '/proj/src/app/other.ts' },
+          ],
+        ],
+      ]),
+    });
+
+    expect(violations).toHaveLength(1);
+    expect(violations[0].message).toContain('features');
+    expect(violations[0].message).toContain('app');
+  });
 });

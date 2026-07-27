@@ -17,4 +17,4 @@ if [ ! -f "$PLUGIN_PATH" ]; then
 fi
 
 echo "[Arch-Lens] Running plugin loading demo"
-node "$CLI_BIN" scan "${ROOT_DIR}/src" --config "$CONFIG_PATH" --plugin "$PLUGIN_PATH" --report table "$@"
+node "$CLI_BIN" scan "${ROOT_DIR}/src" --config "$CONFIG_PATH" --plugin "$PLUGIN_PATH" --report table --allow-violations "$@"

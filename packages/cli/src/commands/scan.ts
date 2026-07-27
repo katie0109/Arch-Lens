@@ -5,8 +5,8 @@ import { createArchLensOrchestrator } from '@arch-lens/core';
 import type { CAC } from 'cac';
 import { watch } from 'chokidar';
 
-import { handleCliError } from '../utils/error-handling.js';
-import { gatherRules } from '../utils/rule-loader.js';
+import { EXIT_CODE, handleCliError } from '../utils/error-handling.js';
+import { loadPluginRules } from '../utils/rule-loader.js';
 
 type ReportMode = 'table' | 'json' | 'list' | 'html' | 'markdown';
 
@@ -113,20 +113,20 @@ export function registerScanCommand(cli: CAC): void {
       try {
         const reportMode = normalizeReportMode(options.report);
         const pluginPaths = normalizePluginOption(options.plugin);
-        const includeBuiltIns = !options.config;
 
         if (options.verbose && pluginPaths.length > 0) {
-          console.log(`[arch-lens] Loading plugins: ${pluginPaths.join(', ')}`);
+          // Logs go to stderr so stdout carries only the report (critical for --report json).
+          console.error(`[arch-lens] Loading plugins: ${pluginPaths.join(', ')}`);
         }
 
-        const loadedRules = await gatherRules({
-          plugin: pluginPaths,
-          includeBuiltIn: includeBuiltIns,
-        });
+        const pluginRules = await loadPluginRules(pluginPaths);
 
+        // Rule-source policy lives in core: a config (explicit or auto-discovered) owns its
+        // rules, built-ins are the default only when no config exists, and plugin rules are
+        // always appended. The CLI just forwards the config path and the plugin rules.
         const orchestrator = await createArchLensOrchestrator({
           configPath: options.config,
-          rules: loadedRules.length > 0 ? loadedRules : undefined,
+          pluginRules,
         });
 
         const watchMode = Boolean(options.watch);
@@ -153,7 +153,7 @@ export function registerScanCommand(cli: CAC): void {
             violationCount: result.violations.length,
           });
 
-          process.exitCode = failScan ? 1 : 0;
+          process.exitCode = failScan ? EXIT_CODE.VIOLATIONS : EXIT_CODE.OK;
         };
 
         await runScan();
@@ -170,7 +170,7 @@ export function registerScanCommand(cli: CAC): void {
           ignoreInitial: true,
         });
 
-        console.log(`[arch-lens] Watching ${include.length} patterns from ${root}`);
+        console.error(`[arch-lens] Watching ${include.length} patterns from ${root}`);
 
         let pending = new Set<string>();
         let debounceTimer: NodeJS.Timeout | null = null;
@@ -184,7 +184,7 @@ export function registerScanCommand(cli: CAC): void {
             return;
           }
 
-          console.log(`[arch-lens] Re-scanning after changes: ${changed.join(', ')}`);
+          console.error(`[arch-lens] Re-scanning after changes: ${changed.join(', ')}`);
 
           try {
             await runScan(changed);

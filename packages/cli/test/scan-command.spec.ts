@@ -16,7 +16,7 @@ vi.mock('@arch-lens/core', () => ({
 }));
 
 vi.mock('../src/utils/rule-loader.js', () => ({
-  gatherRules: vi.fn(async () => []),
+  loadPluginRules: vi.fn(async () => []),
 }));
 
 import { registerScanCommand, normalizeReportMode, shouldFailScan } from '../src/commands/scan.js';

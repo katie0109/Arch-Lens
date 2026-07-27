@@ -60,7 +60,7 @@ import type { ArchLensConfig } from '@arch-lens/core';
 import myTeamPlugin from './plugins/my-team-plugin.js';
 
 const config: ArchLensConfig = {
-  root: process.cwd(),
+  // root를 생략하면 이 설정 파일이 위치한 디렉터리가 기준이 됩니다.
   include: ['src/**/*.{ts,tsx}'],
   exclude: ['**/dist/**', '**/__tests__/**'],
   rules: [
@@ -93,8 +93,9 @@ export default config;
 ## 예제 모노레포 체험하기
 
 - `examples/monorepo-sample/scripts/run-arch-lens.sh`는 CLI와 샘플 플러그인을 한 번에 실행해 주는 스크립트입니다.
-- 스크립트는 CLI/플러그인을 자동으로 빌드한 뒤, 두 번의 스캔을 실행합니다.
-- 데모를 위해 `structure/required-files` 위반(`src/features/index.ts` 없음)을 일부러 남겨두었으니, 위반 메시지가 출력되면 정상 동작입니다.
+- 스크립트는 필요 시 CLI/플러그인을 빌드한 뒤 ① 표 형식 스캔과 ② `--fix` 스캔(JSON)을 실행합니다. 두 스캔 모두 `--allow-violations`로 실행되므로 위반이 있어도 스크립트는 정상 종료(exit 0)합니다.
+- 데모용으로 여러 내장 규칙 위반(기능별 `index.ts` 누락 → `structure/required-feature-index`, 교차 기능 import, allow-list 위반 등)을 일부러 남겨두었으니, 위반 메시지가 출력되면 정상 동작입니다.
+- `--fix`는 커밋된 예제를 건드리지 않도록 임시 디렉터리 복사본에서만 실행됩니다.
 
 ```bash
 ./examples/monorepo-sample/scripts/run-arch-lens.sh
