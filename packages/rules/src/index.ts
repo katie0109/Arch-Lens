@@ -27,12 +27,49 @@ export interface RuleImportReference {
 
 export type RuleDependencyGraph = Map<string, RuleImportReference[]>;
 
+/** A node in the architecture graph: a root-relative, POSIX-style file path. */
+export type GraphNodeId = string;
+
+export interface GraphEdge {
+  from: GraphNodeId;
+  to: GraphNodeId;
+  /** True only when every import forming this edge is `import type` / type-only. */
+  isTypeOnly: boolean;
+}
+
+/**
+ * A queryable view over the first-party dependency graph. Nodes are root-relative file paths;
+ * edges point from a file to the first-party files it imports (external/unresolved imports are
+ * excluded). This is the stable contract rules program against — the underlying representation
+ * can change without touching rule code.
+ */
+export interface ArchitectureGraph {
+  /** All node ids. */
+  nodes(): GraphNodeId[];
+  hasNode(id: GraphNodeId): boolean;
+  /** All directed edges. */
+  edges(): GraphEdge[];
+  /** Direct dependencies (out-neighbours) of a node. */
+  dependenciesOf(id: GraphNodeId): GraphNodeId[];
+  /** Direct dependents (in-neighbours) of a node. */
+  dependentsOf(id: GraphNodeId): GraphNodeId[];
+  /** Whether `to` is reachable from `from` following ≥1 edge (so a node reaches itself only via a cycle). */
+  isReachable(from: GraphNodeId, to: GraphNodeId): boolean;
+  /** A shortest inclusive path `[from, …, to]`, `[from]` when equal, or null when unreachable. */
+  shortestPath(from: GraphNodeId, to: GraphNodeId): GraphNodeId[] | null;
+  /** Tarjan strongly-connected components. A component of size ≥2 (or a self-loop) is a cycle. */
+  stronglyConnectedComponents(): GraphNodeId[][];
+}
+
 export interface RuleContext {
   root: string;
   files: string[];
   fix: boolean;
   verbose: boolean;
+  /** Raw per-file import references. Prefer {@link RuleContext.graph} for graph queries. */
   dependencyGraph: RuleDependencyGraph;
+  /** Queryable architecture graph (dependencies, reachability, shortest path, SCCs). */
+  graph: ArchitectureGraph;
   report?: (violations: RuleViolation | RuleViolation[]) => void;
 }
 
