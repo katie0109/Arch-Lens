@@ -9,5 +9,7 @@ export type { InitializeProjectOptions } from './init/init-service.js';
 export { scanWorkspaceFiles } from './fs/file-scanner.js';
 export type { DependencyGraph, ImportReference } from './parser/ts-dependency-graph.js';
 export { buildDependencyGraph, createDefaultResolver } from './parser/ts-dependency-graph.js';
+export { buildArchitectureGraph } from './graph/architecture-graph.js';
+export type { ArchitectureGraph, GraphNodeId, GraphEdge } from '@arch-lens/rules';
 export { reportViolations } from './reporter/console-reporter.js';
 export type { ArchLensConfig } from './types.js';

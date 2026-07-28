@@ -7,6 +7,7 @@ import { loadBuiltInRules } from '@arch-lens/rules';
 
 import { tryLoadArchLensConfig } from '../config/load-config.js';
 import { scanWorkspaceFiles } from '../fs/file-scanner.js';
+import { buildArchitectureGraph } from '../graph/architecture-graph.js';
 import { DependencyGraphCache } from '../parser/dependency-graph-cache.js';
 import { buildDependencyGraph, createDefaultResolver } from '../parser/ts-dependency-graph.js';
 import { reportViolations } from '../reporter/console-reporter.js';
@@ -39,6 +40,7 @@ interface WorkspaceAnalysis {
   violations: RuleViolation[];
   files: string[];
   dependencyGraph: Awaited<ReturnType<typeof buildDependencyGraph>>;
+  graph: ReturnType<typeof buildArchitectureGraph>;
 }
 
 const DEFAULT_TARGET_GLOB = '**/*.{ts,tsx,js,jsx}';
@@ -217,6 +219,8 @@ export class ArchLensOrchestrator {
       cache: this.dependencyCache,
     });
 
+    const graph = buildArchitectureGraph(dependencyGraph, this.config.root);
+
     const violations: RuleViolation[] = [];
     const collect = (payload: RuleViolation | RuleViolation[]): void => {
       violations.push(...(Array.isArray(payload) ? payload : [payload]));
@@ -229,13 +233,14 @@ export class ArchLensOrchestrator {
         fix: false,
         verbose: Boolean(options.verbose),
         dependencyGraph,
+        graph,
         report: collect,
       };
 
       violations.push(...(await rule.check(context)));
     }
 
-    return { violations, files, dependencyGraph };
+    return { violations, files, dependencyGraph, graph };
   }
 
   /**
@@ -259,6 +264,7 @@ export class ArchLensOrchestrator {
         fix: true,
         verbose: Boolean(options.verbose),
         dependencyGraph: analysis.dependencyGraph,
+        graph: analysis.graph,
         report: discard,
       });
     }
