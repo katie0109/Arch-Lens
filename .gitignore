@@ -6,6 +6,12 @@ dist
 coverage
 *.tsbuildinfo
 
+# Compiled output must never be committed inside src/ (it shadows the .ts sources)
+packages/*/src/**/*.js
+packages/*/src/**/*.d.ts
+packages/*/src/**/*.js.map
+packages/*/src/**/*.d.ts.map
+
 # Logs
 npm-debug.log*
 pnpm-debug.log*
