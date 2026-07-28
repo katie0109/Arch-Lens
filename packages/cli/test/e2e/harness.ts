@@ -1,5 +1,5 @@
 import { spawnSync, type SpawnSyncReturns } from 'node:child_process';
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -16,6 +16,21 @@ export const cliEntry = resolve(repoRoot, 'packages/cli/dist/index.js');
  * inside a generated config resolves via upward node_modules lookup to the workspace links.
  */
 export const tmpRoot = resolve(repoRoot, '.e2e-workspaces');
+
+/**
+ * A per-spec-file scratch root. Each e2e spec file imports the harness in its own module
+ * instance, so `suiteRoot` is unique per file — cleaning it never wipes another file's
+ * still-running projects (which sharing `tmpRoot` across files did).
+ */
+const suiteRoot = join(
+  tmpRoot,
+  `suite-${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+);
+
+/** Removes this spec file's scratch projects. Call from afterAll. */
+export function cleanupSuite(): void {
+  rmSync(suiteRoot, { recursive: true, force: true });
+}
 
 export interface CliResult {
   status: number;
@@ -41,7 +56,7 @@ let counter = 0;
 
 export function makeProject(name: string): string {
   counter += 1;
-  const dir = join(tmpRoot, `${name}-${process.pid}-${Date.now()}-${counter}`);
+  const dir = join(suiteRoot, `${name}-${process.pid}-${Date.now()}-${counter}`);
   mkdirSync(join(dir, 'src'), { recursive: true });
   return dir;
 }

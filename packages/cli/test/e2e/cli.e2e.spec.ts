@@ -1,9 +1,9 @@
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { makeProject, runCli, tmpRoot, writeConfig, writeFile } from './harness.js';
+import { cleanupSuite, makeProject, runCli, writeConfig, writeFile } from './harness.js';
 
 /**
  * End-to-end contract for the built CLI (`packages/cli/dist/index.js`).
@@ -43,7 +43,7 @@ function seedMissingFeatureIndex(dir: string): void {
 
 describe('arch-lens CLI (e2e)', () => {
   afterAll(() => {
-    rmSync(tmpRoot, { recursive: true, force: true });
+    cleanupSuite();
   });
 
   it('init --config scaffolds a new config file in an empty project', () => {
@@ -105,7 +105,7 @@ describe('arch-lens CLI (e2e)', () => {
 
 describe('arch-lens CLI output & exit-code contract (e2e)', () => {
   afterAll(() => {
-    rmSync(tmpRoot, { recursive: true, force: true });
+    cleanupSuite();
   });
 
   it('exits 1 when violations are found', () => {
