@@ -234,11 +234,17 @@ export class ArchLensOrchestrator {
     const graph = buildArchitectureGraph(dependencyGraph, this.config.root);
 
     const violations: RuleViolation[] = [];
-    const collect = (payload: RuleViolation | RuleViolation[]): void => {
-      violations.push(...(Array.isArray(payload) ? payload : [payload]));
-    };
 
     for (const rule of this.config.rules) {
+      // Each violation inherits its rule's severity unless the rule set its own.
+      const tag = (violation: RuleViolation): RuleViolation => ({
+        ...violation,
+        severity: violation.severity ?? rule.meta.severity,
+      });
+      const collect = (payload: RuleViolation | RuleViolation[]): void => {
+        violations.push(...(Array.isArray(payload) ? payload : [payload]).map(tag));
+      };
+
       const context = {
         root: this.config.root,
         files,
@@ -249,7 +255,7 @@ export class ArchLensOrchestrator {
         report: collect,
       };
 
-      violations.push(...(await rule.check(context)));
+      violations.push(...(await rule.check(context)).map(tag));
     }
 
     return { violations, files, dependencyGraph, graph };

@@ -53,21 +53,22 @@ function normalizePluginOption(option: string | string[] | undefined): string[] 
 export function shouldFailScan({
   watchMode,
   failOnViolations,
-  violationCount,
+  errorCount,
 }: {
   watchMode: boolean;
   failOnViolations: boolean;
-  violationCount: number;
+  /** Number of error-severity violations. Warnings are reported but never fail the scan. */
+  errorCount: number;
 }): boolean {
   if (watchMode) {
-    return violationCount > 0;
+    return errorCount > 0;
   }
 
   if (!failOnViolations) {
     return false;
   }
 
-  return violationCount > 0;
+  return errorCount > 0;
 }
 
 async function emitMetrics(path: string, result: {
@@ -146,11 +147,8 @@ export function registerScanCommand(cli: CAC): void {
             await emitMetrics(metricsPath, result);
           }
 
-          const failScan = shouldFailScan({
-            watchMode,
-            failOnViolations,
-            violationCount: result.violations.length,
-          });
+          const errorCount = result.violations.filter((v) => v.severity !== 'warning').length;
+          const failScan = shouldFailScan({ watchMode, failOnViolations, errorCount });
 
           process.exitCode = failScan ? EXIT_CODE.VIOLATIONS : EXIT_CODE.OK;
         };

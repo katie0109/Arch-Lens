@@ -38,18 +38,23 @@ describe('scan command', () => {
     expect(normalizeReportMode('list')).toBe('list');
   });
 
-  it('decides whether a scan should fail based on flags', () => {
+  it('fails only on error-severity violations (warnings never fail)', () => {
     expect(
-      shouldFailScan({ watchMode: false, failOnViolations: true, violationCount: 2 }),
+      shouldFailScan({ watchMode: false, failOnViolations: true, errorCount: 2 }),
     ).toBe(true);
+    // Errors present but --allow-violations set.
     expect(
-      shouldFailScan({ watchMode: false, failOnViolations: false, violationCount: 5 }),
+      shouldFailScan({ watchMode: false, failOnViolations: false, errorCount: 5 }),
+    ).toBe(false);
+    // Only warnings -> zero errors -> no failure.
+    expect(
+      shouldFailScan({ watchMode: false, failOnViolations: true, errorCount: 0 }),
     ).toBe(false);
     expect(
-      shouldFailScan({ watchMode: true, failOnViolations: true, violationCount: 0 }),
+      shouldFailScan({ watchMode: true, failOnViolations: true, errorCount: 0 }),
     ).toBe(false);
     expect(
-      shouldFailScan({ watchMode: true, failOnViolations: true, violationCount: 1 }),
+      shouldFailScan({ watchMode: true, failOnViolations: true, errorCount: 1 }),
     ).toBe(true);
   });
 });

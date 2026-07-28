@@ -79,9 +79,13 @@ export interface RuleViolationLocation {
   column?: number;
 }
 
+export type RuleSeverity = 'error' | 'warning';
+
 export interface RuleViolation extends RuleViolationLocation {
   ruleId: string;
   message: string;
+  /** Effective severity of this violation. Defaults to the producing rule's meta severity. */
+  severity?: RuleSeverity;
   fixable?: boolean;
   suggestedFix?: string;
 }
