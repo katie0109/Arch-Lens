@@ -25,9 +25,9 @@ function isBareSpecifier(specifier: string): boolean {
 }
 
 /**
- * Resolves a `--plugin` value to an importable module URL:
+ * Resolves a plugin specifier to an importable module URL:
  *   - `file:` URLs pass through untouched,
- *   - bare specifiers (`@scope/pkg`, `pkg`, `pkg/sub`) resolve through the consumer project's
+ *   - bare specifiers (`@scope/pkg`, `pkg`, `pkg/sub`) resolve through the project's
  *     node_modules, exactly as the project itself would import them,
  *   - anything else is treated as a path relative to `cwd`.
  */
@@ -37,7 +37,7 @@ export function resolvePluginUrl(specifier: string, cwd: string = process.cwd())
   }
 
   if (isBareSpecifier(specifier)) {
-    // Anchor Node's resolver at the consumer project so a plugin installed there is found.
+    // Anchor Node's resolver at the project so a plugin installed there is found.
     const requireFromCwd = createRequire(resolve(cwd, '__arch-lens-plugin-resolver__.js'));
 
     try {
@@ -53,8 +53,8 @@ export function resolvePluginUrl(specifier: string, cwd: string = process.cwd())
   return pathToFileURL(resolve(cwd, specifier)).href;
 }
 
-async function loadPluginModule(specifier: string): Promise<ArchLensRule[]> {
-  const moduleUrl = resolvePluginUrl(specifier);
+async function loadPluginModule(specifier: string, cwd: string): Promise<ArchLensRule[]> {
+  const moduleUrl = resolvePluginUrl(specifier, cwd);
   const imported = await import(moduleUrl);
   const pluginCandidate = imported.default ?? imported.plugin ?? imported;
   const plugin = pluginCandidate as Partial<PluginModule<ArchLensRule>>;
@@ -69,14 +69,20 @@ async function loadPluginModule(specifier: string): Promise<ArchLensRule[]> {
 }
 
 /**
- * Loads the rules contributed by `--plugin` values (local paths, `file:` URLs, or bare npm
- * package specifiers). Built-in rules are provided by core.
+ * Loads the rules contributed by a list of plugin specifiers (local paths, `file:` URLs, or
+ * bare npm package specifiers). Used for both the CLI's `--plugin` flag and the config's
+ * `plugins` array; the caller picks `cwd` (the invocation dir vs. the config's root).
  */
-export async function loadPluginRules(pluginPaths: string[]): Promise<ArchLensRule[]> {
-  if (pluginPaths.length === 0) {
+export async function loadPluginRules(
+  specifiers: string[],
+  cwd: string = process.cwd(),
+): Promise<ArchLensRule[]> {
+  if (specifiers.length === 0) {
     return [];
   }
 
-  const pluginRuleSets = await Promise.all(pluginPaths.map(loadPluginModule));
+  const pluginRuleSets = await Promise.all(
+    specifiers.map((specifier) => loadPluginModule(specifier, cwd)),
+  );
   return pluginRuleSets.flat();
 }

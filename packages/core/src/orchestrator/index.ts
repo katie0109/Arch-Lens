@@ -10,6 +10,7 @@ import { scanWorkspaceFiles } from '../fs/file-scanner.js';
 import { buildArchitectureGraph } from '../graph/architecture-graph.js';
 import { DependencyGraphCache } from '../parser/dependency-graph-cache.js';
 import { buildDependencyGraph, createDefaultResolver } from '../parser/ts-dependency-graph.js';
+import { loadPluginRules } from '../plugins/load-plugins.js';
 import { reportViolations } from '../reporter/console-reporter.js';
 import type {
   ArchLensConfig,
@@ -32,7 +33,7 @@ export interface ArchLensOrchestratorOptions {
   pluginRules?: ArchLensRule[];
 }
 
-interface InternalConfig extends Required<Omit<ArchLensConfig, 'rules'>> {
+interface InternalConfig extends Required<Omit<ArchLensConfig, 'rules' | 'plugins'>> {
   rules: ArchLensRule[];
 }
 
@@ -108,6 +109,15 @@ async function deriveTargetInclude(root: string, target: string): Promise<string
   return [cleaned];
 }
 
+/** Loads rules from a config's own `plugins` array, resolved relative to the config root. */
+async function loadConfigPluginRules(config: ArchLensConfig, root: string): Promise<ArchLensRule[]> {
+  if (!config.plugins || config.plugins.length === 0) {
+    return [];
+  }
+
+  return loadPluginRules(config.plugins, root);
+}
+
 export class ArchLensOrchestrator {
   private readonly cwd: string;
   private readonly config: InternalConfig;
@@ -134,10 +144,12 @@ export class ArchLensOrchestrator {
 
     // Inline config: it owns its rules; built-ins are not implicitly merged.
     if (options.config) {
+      const root = options.config.root ?? cwd;
       const rules = resolveRules({
         configRules: options.config.rules,
         defaultRules,
-        pluginRules,
+        // CLI --plugin rules plus any declared by the config's own `plugins` array.
+        pluginRules: [...pluginRules, ...(await loadConfigPluginRules(options.config, root))],
       });
       return new ArchLensOrchestrator(cwd, { ...options.config, rules });
     }
@@ -153,7 +165,7 @@ export class ArchLensOrchestrator {
       const rules = resolveRules({
         configRules: loaded.config.rules,
         defaultRules,
-        pluginRules,
+        pluginRules: [...pluginRules, ...(await loadConfigPluginRules(loaded.config, root))],
       });
       return new ArchLensOrchestrator(cwd, { ...loaded.config, root, rules });
     }

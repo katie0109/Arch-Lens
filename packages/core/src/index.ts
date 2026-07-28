@@ -11,5 +11,6 @@ export type { DependencyGraph, ImportReference } from './parser/ts-dependency-gr
 export { buildDependencyGraph, createDefaultResolver } from './parser/ts-dependency-graph.js';
 export { buildArchitectureGraph } from './graph/architecture-graph.js';
 export type { ArchitectureGraph, GraphNodeId, GraphEdge } from '@arch-lens/rules';
+export { loadPluginRules, resolvePluginUrl } from './plugins/load-plugins.js';
 export { reportViolations } from './reporter/console-reporter.js';
 export type { ArchLensConfig } from './types.js';

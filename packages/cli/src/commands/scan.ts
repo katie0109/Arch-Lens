@@ -1,12 +1,11 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
-import { createArchLensOrchestrator } from '@arch-lens/core';
+import { createArchLensOrchestrator, loadPluginRules } from '@arch-lens/core';
 import type { CAC } from 'cac';
 import { watch } from 'chokidar';
 
 import { EXIT_CODE, handleCliError } from '../utils/error-handling.js';
-import { loadPluginRules } from '../utils/rule-loader.js';
 
 type ReportMode = 'table' | 'json' | 'list' | 'html' | 'markdown';
 

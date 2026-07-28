@@ -3,7 +3,7 @@ import { pathToFileURL } from 'node:url';
 
 import { describe, expect, it } from 'vitest';
 
-import { resolvePluginUrl } from '../src/utils/rule-loader.js';
+import { resolvePluginUrl } from '../src/plugins/load-plugins.js';
 
 describe('resolvePluginUrl', () => {
   const cwd = process.cwd();
