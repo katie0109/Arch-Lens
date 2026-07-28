@@ -32,6 +32,15 @@ export function validateConfig(
     );
   }
 
+  if (
+    config.plugins !== undefined &&
+    (!Array.isArray(config.plugins) || config.plugins.some((p) => typeof p !== 'string'))
+  ) {
+    throw new ConfigValidationError(
+      `Arch-Lens config at ${source} has a "plugins" field that must be an array of strings.`,
+    );
+  }
+
   config.rules.forEach((rule, index) => {
     if (!isRecord(rule) || typeof rule.id !== 'string' || rule.id.length === 0) {
       throw new ConfigValidationError(

@@ -53,4 +53,28 @@ describe('arch-lens plugin loading (e2e)', () => {
     const report = JSON.parse(result.stdout) as JsonReport;
     expect(report.violations.some((v) => v.ruleId === 'demo/bare-loaded')).toBe(true);
   });
+
+  it('loads plugins declared in the config `plugins` array', () => {
+    const dir = makeProject('config-plugins');
+    writeFile(dir, 'src/a.ts', 'export const a = 1;\n');
+    installBarePlugin(dir, 'arch-lens-plugin-demo');
+    writeFile(
+      dir,
+      'arch.config.mjs',
+      `export default {
+  include: ['src/**/*.{ts,tsx,js,jsx}'],
+  exclude: ['**/node_modules/**'],
+  plugins: ['arch-lens-plugin-demo'],
+  rules: [],
+};
+`,
+    );
+
+    // No --plugin flag: the plugin is discovered purely from the config's `plugins` array.
+    const result = runCli(['scan', '--report', 'json', '--allow-violations'], dir);
+
+    expect(result.status).toBe(0);
+    const report = JSON.parse(result.stdout) as JsonReport;
+    expect(report.violations.some((v) => v.ruleId === 'demo/bare-loaded')).toBe(true);
+  });
 });

@@ -38,6 +38,8 @@ export interface ArchLensConfig {
   root?: string;
   include?: string[];
   exclude?: string[];
+  /** Plugin specifiers (local paths, `file:` URLs, or bare npm packages) to load rules from. */
+  plugins?: string[];
   rules: ArchLensRule[];
 }
 
