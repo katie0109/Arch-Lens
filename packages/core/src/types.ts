@@ -55,12 +55,20 @@ export type RuleSetting = ConfigSeverity | ['error' | 'warn', unknown];
 /** The ESLint-style rules map: rule id -> setting. */
 export type RulesMap = Record<string, RuleSetting>;
 
+/** Maps files (by regex over their root-relative path) to a named project for the project graph. */
+export interface ProjectDefinition {
+  name: string;
+  pattern: string;
+}
+
 export interface ArchLensConfig {
   root?: string;
   include?: string[];
   exclude?: string[];
   /** Plugin specifiers (local paths, `file:` URLs, or bare npm packages) to load rules from. */
   plugins?: string[];
+  /** Project definitions used to derive the project-level graph (`context.projectGraph`). */
+  projects?: ProjectDefinition[];
   /**
    * Either the legacy array of rule instances, or the ESLint-style map keyed by rule id.
    * In the map form, built-in and plugin rules are the registry and the map activates them.
