@@ -5,6 +5,7 @@ import { performance } from 'node:perf_hooks';
 import type { ArchLensRule, RuleViolation } from '@arch-lens/rules';
 import { loadBuiltInRules } from '@arch-lens/rules';
 
+import { applyBaseline } from '../baseline/baseline.js';
 import { tryLoadArchLensConfig } from '../config/load-config.js';
 import { scanWorkspaceFiles } from '../fs/file-scanner.js';
 import { buildArchitectureGraph } from '../graph/architecture-graph.js';
@@ -225,13 +226,25 @@ export class ArchLensOrchestrator {
       analysis = await this.analyze(options);
     }
 
-    // Reporter runs exactly once, at the very end, on stdout.
-    reportViolations(analysis.violations, { format: reportFormat, pretty: options.pretty });
+    // Suppress baselined violations before anything is reported or counted.
+    let violations = analysis.violations;
+    let suppressedCount = 0;
+    if (options.baseline) {
+      const applied = applyBaseline(violations, options.baseline);
+      violations = applied.remaining;
+      suppressedCount = applied.suppressed;
+    }
+
+    // Reporter runs exactly once, at the very end, on stdout (unless silenced).
+    if (!options.silent) {
+      reportViolations(violations, { format: reportFormat, pretty: options.pretty });
+    }
 
     return {
-      violations: analysis.violations,
+      violations,
       files: analysis.files,
       durationMs: performance.now() - start,
+      suppressedCount,
     };
   }
 

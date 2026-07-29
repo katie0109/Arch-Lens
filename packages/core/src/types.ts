@@ -1,5 +1,6 @@
 import type { ArchLensRule, RuleViolation } from '@arch-lens/rules';
 
+import type { BaselineData } from './baseline/baseline.js';
 import type { ReportFormat } from './reporter/console-reporter.js';
 
 export interface ScanOptions {
@@ -9,6 +10,10 @@ export interface ScanOptions {
   reportFormat?: ReportFormat;
   pretty?: boolean;
   changedFiles?: string[];
+  /** When set, violations recorded in the baseline are suppressed before reporting. */
+  baseline?: BaselineData;
+  /** Skip the reporter and just return the result (used to capture violations, e.g. for baseline). */
+  silent?: boolean;
 }
 
 export interface InitOptions {
@@ -32,6 +37,8 @@ export interface ScanResult {
   violations: RuleViolation[];
   files: string[];
   durationMs: number;
+  /** How many violations the baseline suppressed (0 when no baseline was applied). */
+  suppressedCount: number;
 }
 
 /** ESLint-style severities used in the config's `rules` map. `warn` maps to `warning`. */
