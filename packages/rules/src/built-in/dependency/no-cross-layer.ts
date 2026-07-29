@@ -81,7 +81,11 @@ function collectViolations(
 }
 
 export function createNoCrossLayerRule(options?: NoCrossLayerRuleOptions): ArchLensRule {
-  const layers = normaliseOptions(options);
+  const bakedLayers = normaliseOptions(options);
+
+  // Prefer config-provided options (map form) over options baked in at creation (array form).
+  const layersFor = (context: RuleContext): LayerConfig[] =>
+    context.options ? normaliseOptions(context.options as NoCrossLayerRuleOptions) : bakedLayers;
 
   return {
     id: 'dependency/no-cross-layer',
@@ -90,14 +94,14 @@ export function createNoCrossLayerRule(options?: NoCrossLayerRuleOptions): ArchL
       severity: 'error',
       type: 'dependency',
     },
-    async check({ dependencyGraph, root }: RuleContext): Promise<RuleViolation[]> {
-      return collectViolations(dependencyGraph, layers, root);
+    async check(context: RuleContext): Promise<RuleViolation[]> {
+      return collectViolations(context.dependencyGraph, layersFor(context), context.root);
     },
-    async fix({ dependencyGraph, root, report }: RuleContext): Promise<void> {
-      const violations = collectViolations(dependencyGraph, layers, root);
+    async fix(context: RuleContext): Promise<void> {
+      const violations = collectViolations(context.dependencyGraph, layersFor(context), context.root);
 
       if (violations.length > 0) {
-        report?.(violations);
+        context.report?.(violations);
       }
     },
   };

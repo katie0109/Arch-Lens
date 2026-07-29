@@ -26,13 +26,30 @@ export function validateConfig(
     );
   }
 
-  if (!Array.isArray(config.rules)) {
+  if (!isRecord(config.rules) && !Array.isArray(config.rules)) {
     throw new ConfigValidationError(
-      `Arch-Lens config at ${source} must define a "rules" array.`,
+      `Arch-Lens config at ${source} must define "rules" as an array or an id→severity map.`,
     );
   }
 
-  config.rules.forEach((rule, index) => {
+  if (
+    config.plugins !== undefined &&
+    (!Array.isArray(config.plugins) || config.plugins.some((p) => typeof p !== 'string'))
+  ) {
+    throw new ConfigValidationError(
+      `Arch-Lens config at ${source} has a "plugins" field that must be an array of strings.`,
+    );
+  }
+
+  if (Array.isArray(config.rules)) {
+    validateRuleArray(config.rules, source);
+  } else {
+    validateRulesMap(config.rules, source);
+  }
+}
+
+function validateRuleArray(rules: unknown[], source: string): void {
+  rules.forEach((rule, index) => {
     if (!isRecord(rule) || typeof rule.id !== 'string' || rule.id.length === 0) {
       throw new ConfigValidationError(
         `Arch-Lens config at ${source} has a rule at index ${index} without a non-empty string "id".`,
@@ -45,4 +62,18 @@ export function validateConfig(
       );
     }
   });
+}
+
+const VALID_LEVELS = new Set(['off', 'warn', 'error']);
+
+function validateRulesMap(rules: Record<string, unknown>, source: string): void {
+  for (const [id, setting] of Object.entries(rules)) {
+    const level = Array.isArray(setting) ? setting[0] : setting;
+
+    if (typeof level !== 'string' || !VALID_LEVELS.has(level)) {
+      throw new ConfigValidationError(
+        `Rule "${id}" in ${source} has an invalid setting. Use 'off', 'warn', 'error', or [level, options].`,
+      );
+    }
+  }
 }

@@ -40,8 +40,9 @@ function getTargets(options?: RequiredFilesRuleOptions): RequiredFilesTarget[] {
 export function createRequiredFilesRule(
   options?: RequiredFilesRuleOptions,
 ): ArchLensRule {
-  const targets = getTargets(options);
-  const rootOverride = options?.root;
+  // Prefer config-provided options (map form) over options baked in at creation (array form).
+  const optionsFor = (context: RuleContext): RequiredFilesRuleOptions | undefined =>
+    (context.options as RequiredFilesRuleOptions | undefined) ?? options;
 
   return {
     id: 'structure/required-files',
@@ -51,6 +52,9 @@ export function createRequiredFilesRule(
       type: 'structure',
     },
     async check(context: RuleContext): Promise<RuleViolation[]> {
+      const opts = optionsFor(context);
+      const targets = getTargets(opts);
+      const rootOverride = opts?.root;
       const violations: RuleViolation[] = [];
       const rootDir = rootOverride ? path.join(context.root, rootOverride) : context.root;
 
@@ -73,6 +77,9 @@ export function createRequiredFilesRule(
       return violations;
     },
     async fix(context: RuleContext): Promise<void> {
+      const opts = optionsFor(context);
+      const targets = getTargets(opts);
+      const rootOverride = opts?.root;
       const rootDir = rootOverride ? path.join(context.root, rootOverride) : context.root;
 
       for (const target of targets) {
