@@ -1,9 +1,10 @@
 import type { ArchLensConfig } from '@arch-lens/core';
-import { loadBuiltInRules } from '@arch-lens/rules';
 
 const config: ArchLensConfig = {
   root: __dirname,
-  rules: loadBuiltInRules({ include: ['structure/filename-case'] }),
+  rules: {
+    'structure/filename-case': 'warn',
+  },
 };
 
 export default config;

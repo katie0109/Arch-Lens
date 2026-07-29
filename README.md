@@ -11,9 +11,10 @@ Arch-Lens는 대규모 프론트엔드 모노레포의 구조·의존성 컨벤�
 ## 왜 Arch-Lens인가요?
 
 - `arch-lens scan` 한 번으로 구조/의존성 위반을 탐지하고, auto-fix 가능한 항목을 즉시 수정합니다.
-- mtime 기반 의존성 그래프 캐시와 `--watch`, `--metrics` 옵션으로 대형 모노레포에서도 빠르게 반복 실행할 수 있습니다.
-- 내장 규칙 외에도 `@arch-lens/plugins` SDK로 팀 전용 규칙을 플러그인 형태로 배포할 수 있습니다.
-- CI 파이프라인, 샘플 모노레포, 상세 문서 세트가 함께 제공되어 곧바로 팀 규칙을 자동화할 수 있습니다.
+- **ESLint식 rules 맵**으로 규칙별 `off`/`warn`/`error`와 옵션을 지정합니다. `error`만 종료코드를 실패시키고(warning은 통과), `--report json`은 항상 단일 JSON 문서입니다.
+- **그래프 질의 API**(`isReachable`/`shortestPath`/`stronglyConnectedComponents`)를 규칙에 제공해, 단순 import 금지가 아니라 전이 의존·경로 기반 정책을 코드로 표현할 수 있습니다.
+- 팀 규칙을 **npm 패키지 플러그인**으로 배포하고, `--plugin @scope/rules` 또는 config의 `plugins` 배열로 로드합니다.
+- mtime 기반 의존성 그래프 캐시와 `--watch`, `--metrics` 옵션, CI 파이프라인, 샘플 모노레포가 함께 제공됩니다.
 
 ---
 
@@ -49,44 +50,57 @@ pnpm --filter @arch-lens/cli exec arch-lens scan --metrics ./metrics.json
 
 ---
 
-## 내 규칙 세트를 어떻게 꾸미나요?
+## 규칙 설정 (rules 맵)
 
-Arch-Lens는 **기본 규칙을 그대로 사용해도 되고**, `loadBuiltInRules({ include, exclude, overrides })`를 통해 원하는 규칙만 로드할 수도 있습니다. 여기에 플러그인으로 정의한 규칙을 이어 붙이면 팀 고유의 정책을 완성할 수 있습니다.
+`arch-lens init`이 생성하는 설정은 **ESLint식 rules 맵**입니다. 규칙 id에 `off`/`warn`/`error`를 지정하고, 옵션이 필요하면 `[severity, options]` 튜플로 전달합니다. 내장 규칙과 플러그인 규칙은 모두 id로 참조합니다.
 
 ```ts
 // arch.config.ts 예시
-import { loadBuiltInRules } from '@arch-lens/rules';
 import type { ArchLensConfig } from '@arch-lens/core';
-import myTeamPlugin from './plugins/my-team-plugin.js';
 
 const config: ArchLensConfig = {
   // root를 생략하면 이 설정 파일이 위치한 디렉터리가 기준이 됩니다.
   include: ['src/**/*.{ts,tsx}'],
   exclude: ['**/dist/**', '**/__tests__/**'],
-  rules: [
-    ...loadBuiltInRules({
-      include: [
-        'structure/required-files',
-        'structure/filename-case',
-        'dependency/no-cross-layer',
-      ],
-      overrides: {
-        'structure/filename-case': {
-          rules: [{ test: '^src/components/.+\\.tsx$', style: 'pascal-case' }],
-        },
-      },
-      exclude: ['structure/no-loose-files'],
-    }),
-    ...myTeamPlugin.rules,
-  ],
+  // npm/로컬 플러그인을 선언하면 그 규칙들을 id로 활성화할 수 있습니다.
+  plugins: ['@your-scope/arch-lens-rules'],
+  rules: {
+    'structure/required-files': 'error',
+    'structure/no-loose-files': 'off',
+    'structure/filename-case': [
+      'warn',
+      { rules: [{ test: '^src/components/.+\\.tsx$', style: 'pascal-case' }] },
+    ],
+    'dependency/no-cross-layer': 'error',
+    // 플러그인이 제공하는 규칙도 동일하게 id로 켭니다.
+    '@your-scope/no-legacy-import': 'error',
+  },
 };
 
 export default config;
 ```
 
->  위 예시처럼 **필요한 규칙만 고르고**, 언제든 새 플러그인을 추가/삭제할 수 있습니다. 저장소의 기본 규칙 셋은 데모를 위해 임의로 구성되어 있으며, 실제 팀에서는 자유롭게 커스터마이즈하면 됩니다.
+- `error`가 하나라도 있으면 `scan`은 종료코드 1로 실패하고, `warning`만 있으면 통과(0)합니다.
+- 기존 **배열 형식**(`rules: [ruleInstance, ...]`)도 그대로 지원하므로 점진적으로 옮길 수 있습니다.
 
-플러그인 제작 방법과 샘플은 [`docs/plugin-guide.md`](./docs/plugin-guide.md)를 참고하세요. `createRule`/`definePlugin` 헬퍼와 `PluginRuleContext` 타입이 제공되며, 샘플 플러그인 3종도 `packages/plugins`에서 확인할 수 있습니다.
+### 그래프 기반 실행형 규칙 · 플러그인
+
+규칙은 `context.graph`로 **아키텍처 그래프**를 질의할 수 있습니다 — `dependenciesOf`, `dependentsOf`, `isReachable`, `shortestPath`, `stronglyConnectedComponents`. 이 덕분에 "특정 영역에 **직접 또는 전이적으로** 접근 금지, 반드시 gateway 경유"처럼 경로 기반 정책을 코드로 표현할 수 있습니다.
+
+대표 예제 [`examples/gateway-only`](./examples/gateway-only)는 그래프 탐색 + 옵션 + **만료일 있는 waiver**를 결합한 `sample/gateway-only-access` 규칙을 플러그인으로 로드해 시연합니다.
+
+```ts
+plugins: ['@company/arch-lens-rules'],
+rules: {
+  'sample/gateway-only-access': ['error', {
+    restricted: ['^src/legacy/'],
+    gateways: ['^src/gateway/'],
+    waivers: [{ from: '^src/app/checkout\\.ts$', until: '2026-12-31', reason: 'migration' }],
+  }],
+},
+```
+
+플러그인 제작은 [`docs/plugin-guide.md`](./docs/plugin-guide.md)를 참고하세요. `createRule`/`definePlugin` 헬퍼가 제공되며, 샘플 플러그인은 `packages/plugins`에서 확인할 수 있습니다. `--plugin <path|@scope/pkg>` 또는 config의 `plugins` 배열로 로드합니다.
 
 ---
 
