@@ -17,7 +17,7 @@
   ],
   "sideEffects": false,
   "engines": {
-    "node": ">=18.17"
+    "node": ">=20"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -26,9 +26,6 @@
     "lint": "eslint \"src/**/*.ts\"",
     "test": "vitest run rules",
     "prepublishOnly": "pnpm run build"
-  },
-  "dependencies": {
-    "@arch-lens/plugins": "workspace:*"
   },
   "devDependencies": {
     "rimraf": "^5.0.5"

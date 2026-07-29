@@ -1,9 +1,9 @@
-import { existsSync, rmSync } from 'node:fs';
+import { existsSync } from 'node:fs';
 import { join } from 'node:path';
 
 import { afterAll, describe, expect, it } from 'vitest';
 
-import { makeProject, runCli, tmpRoot, writeConfig, writeFile } from './harness.js';
+import { cleanupSuite, makeProject, runCli, writeConfig, writeFile } from './harness.js';
 
 /**
  * End-to-end contract for the built CLI (`packages/cli/dist/index.js`).
@@ -43,7 +43,7 @@ function seedMissingFeatureIndex(dir: string): void {
 
 describe('arch-lens CLI (e2e)', () => {
   afterAll(() => {
-    rmSync(tmpRoot, { recursive: true, force: true });
+    cleanupSuite();
   });
 
   it('init --config scaffolds a new config file in an empty project', () => {
@@ -105,23 +105,42 @@ describe('arch-lens CLI (e2e)', () => {
 
 describe('arch-lens CLI output & exit-code contract (e2e)', () => {
   afterAll(() => {
-    rmSync(tmpRoot, { recursive: true, force: true });
+    cleanupSuite();
   });
 
-  it('exits 1 when violations are found', () => {
-    const dir = makeProject('exit-violations');
+  it('exits 1 when error-severity violations are found', () => {
+    // A circular dependency is an error-severity built-in rule.
+    const dir = makeProject('exit-error');
+    writeFile(dir, 'src/a.ts', "import './b';\nexport const a = 1;\n");
+    writeFile(dir, 'src/b.ts', "import './a';\nexport const b = 1;\n");
+    writeConfig(dir, ['dependency/no-circular']);
+
+    const result = runCli(['scan', '--report', 'json', '--config', 'arch.config.mjs'], dir);
+
+    const { errorCount } = JSON.parse(result.stdout) as { errorCount: number };
+    expect(errorCount).toBeGreaterThan(0);
+    expect(result.status).toBe(1);
+  });
+
+  it('does not fail the scan on warning-only violations (exit 0)', () => {
+    // required-feature-index is a warning-severity rule.
+    const dir = makeProject('exit-warning');
     seedMissingFeatureIndex(dir);
     writeConfig(dir, [RFI]);
 
     const result = runCli(['scan', '--report', 'json', '--config', 'arch.config.mjs'], dir);
 
-    expect(result.status).toBe(1);
+    const report = JSON.parse(result.stdout) as { warningCount: number; errorCount: number };
+    expect(report.warningCount).toBeGreaterThan(0);
+    expect(report.errorCount).toBe(0);
+    expect(result.status).toBe(0);
   });
 
-  it('exits 0 with --allow-violations even when violations are found', () => {
+  it('exits 0 with --allow-violations even when errors are found', () => {
     const dir = makeProject('exit-allow');
-    seedMissingFeatureIndex(dir);
-    writeConfig(dir, [RFI]);
+    writeFile(dir, 'src/a.ts', "import './b';\nexport const a = 1;\n");
+    writeFile(dir, 'src/b.ts', "import './a';\nexport const b = 1;\n");
+    writeConfig(dir, ['dependency/no-circular']);
 
     const result = runCli(
       ['scan', '--report', 'json', '--config', 'arch.config.mjs', '--allow-violations'],

@@ -10,6 +10,7 @@ export interface ReportSettings {
 function toSerializableViolation(violation: RuleViolation) {
   return {
     ruleId: violation.ruleId,
+    severity: violation.severity ?? 'error',
     message: violation.message,
     file: violation.file ?? null,
     line: violation.line ?? null,
@@ -26,9 +27,12 @@ export function reportViolations(
   const format = settings.format ?? 'table';
 
   if (format === 'json') {
+    const serialized = violations.map(toSerializableViolation);
     const payload = {
-      count: violations.length,
-      violations: violations.map(toSerializableViolation),
+      count: serialized.length,
+      errorCount: serialized.filter((v) => v.severity === 'error').length,
+      warningCount: serialized.filter((v) => v.severity === 'warning').length,
+      violations: serialized,
     };
 
     // eslint-disable-next-line no-console
@@ -120,6 +124,7 @@ ${rows}
     console.table(
       violations.map((violation) => ({
         rule: violation.ruleId,
+        severity: violation.severity ?? 'error',
         file: violation.file ?? 'n/a',
         message: violation.message,
         line: violation.line ?? '-',
@@ -147,8 +152,9 @@ ${rows}
     }
 
     const location = locationParts.length > 0 ? ` (${locationParts.join(': ')})` : '';
+    const severity = (violation.severity ?? 'error').toUpperCase();
     // eslint-disable-next-line no-console
-    console.log(`[Arch-Lens] ❌ [${violation.ruleId}] ${violation.message}${location}`);
+    console.log(`[Arch-Lens] ❌ [${severity}] [${violation.ruleId}] ${violation.message}${location}`);
 
     if (violation.suggestedFix) {
       // eslint-disable-next-line no-console

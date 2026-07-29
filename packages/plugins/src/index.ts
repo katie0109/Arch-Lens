@@ -11,3 +11,12 @@ export {
 } from './sample/enforce-shared-imports.js';
 export type { EnforceSharedImportsOptions } from './sample/enforce-shared-imports.js';
 export { default as noDefaultExportPlugin, noDefaultExportRule } from './sample/no-default-export.js';
+export {
+  default as gatewayOnlyAccessPlugin,
+  gatewayOnlyAccessRule,
+  createGatewayOnlyAccessRule,
+} from './sample/gateway-only-access.js';
+export type {
+  GatewayOnlyAccessOptions,
+  GatewayWaiver,
+} from './sample/gateway-only-access.js';
