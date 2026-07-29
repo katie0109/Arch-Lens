@@ -89,7 +89,11 @@ function collectViolations(
 export function createDependencyAllowListRule(
   options?: DependencyAllowListRuleOptions,
 ): ArchLensRule {
-  const entries = normaliseEntries(options);
+  // Prefer config-provided options (map form) over options baked in at creation (array form).
+  const entriesFor = (context: RuleContext): AllowListRuleEntry[] =>
+    context.options
+      ? normaliseEntries(context.options as DependencyAllowListRuleOptions)
+      : normaliseEntries(options);
 
   return {
     id: 'dependency/allow-list',
@@ -98,14 +102,14 @@ export function createDependencyAllowListRule(
       severity: 'error',
       type: 'dependency',
     },
-    async check({ dependencyGraph, root }: RuleContext): Promise<RuleViolation[]> {
-      return collectViolations(dependencyGraph, entries, root);
+    async check(context: RuleContext): Promise<RuleViolation[]> {
+      return collectViolations(context.dependencyGraph, entriesFor(context), context.root);
     },
-    async fix({ dependencyGraph, root, report }: RuleContext): Promise<void> {
-      const violations = collectViolations(dependencyGraph, entries, root);
+    async fix(context: RuleContext): Promise<void> {
+      const violations = collectViolations(context.dependencyGraph, entriesFor(context), context.root);
 
       if (violations.length) {
-        report?.(violations);
+        context.report?.(violations);
       }
     },
   };

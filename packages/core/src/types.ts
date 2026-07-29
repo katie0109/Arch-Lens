@@ -34,13 +34,26 @@ export interface ScanResult {
   durationMs: number;
 }
 
+/** ESLint-style severities used in the config's `rules` map. `warn` maps to `warning`. */
+export type ConfigSeverity = 'off' | 'warn' | 'error';
+
+/** A single rule setting: a severity, or a `[severity, options]` tuple. */
+export type RuleSetting = ConfigSeverity | ['error' | 'warn', unknown];
+
+/** The ESLint-style rules map: rule id -> setting. */
+export type RulesMap = Record<string, RuleSetting>;
+
 export interface ArchLensConfig {
   root?: string;
   include?: string[];
   exclude?: string[];
   /** Plugin specifiers (local paths, `file:` URLs, or bare npm packages) to load rules from. */
   plugins?: string[];
-  rules: ArchLensRule[];
+  /**
+   * Either the legacy array of rule instances, or the ESLint-style map keyed by rule id.
+   * In the map form, built-in and plugin rules are the registry and the map activates them.
+   */
+  rules: ArchLensRule[] | RulesMap;
 }
 
 export type { ReportFormat };

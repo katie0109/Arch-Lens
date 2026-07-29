@@ -19,7 +19,7 @@ import type {
   ScanResult,
 } from '../types.js';
 
-import { resolveRules } from './resolve-rules.js';
+import { resolveRules, type ResolvedRule } from './resolve-rules.js';
 
 export interface ArchLensOrchestratorOptions {
   cwd?: string;
@@ -34,7 +34,14 @@ export interface ArchLensOrchestratorOptions {
 }
 
 interface InternalConfig extends Required<Omit<ArchLensConfig, 'rules' | 'plugins'>> {
-  rules: ArchLensRule[];
+  rules: ResolvedRule[];
+}
+
+interface OrchestratorInit {
+  root?: string;
+  include?: string[];
+  exclude?: string[];
+  rules: ResolvedRule[];
 }
 
 interface WorkspaceAnalysis {
@@ -123,18 +130,27 @@ export class ArchLensOrchestrator {
   private readonly config: InternalConfig;
   private readonly dependencyCache = new DependencyGraphCache();
 
-  private constructor(cwd: string, config: ArchLensConfig) {
+  private constructor(cwd: string, init: OrchestratorInit) {
     this.cwd = cwd;
     this.config = {
-      root: config.root ?? cwd,
-      include: config.include ?? ['src/**/*.{ts,tsx,js,jsx}'],
-      exclude: config.exclude ?? ['**/node_modules/**', '**/dist/**', '**/.turbo/**'],
-      rules: config.rules,
+      root: init.root ?? cwd,
+      include: init.include ?? ['src/**/*.{ts,tsx,js,jsx}'],
+      exclude: init.exclude ?? ['**/node_modules/**', '**/dist/**', '**/.turbo/**'],
+      rules: init.rules,
     };
   }
 
   static fromConfig(cwd: string, config: ArchLensConfig): ArchLensOrchestrator {
-    return new ArchLensOrchestrator(cwd, config);
+    const rules = resolveRules({
+      configRules: config.rules,
+      defaultRules: loadBuiltInRules(),
+    });
+    return new ArchLensOrchestrator(cwd, {
+      root: config.root,
+      include: config.include,
+      exclude: config.exclude,
+      rules,
+    });
   }
 
   static async bootstrap(options: ArchLensOrchestratorOptions = {}): Promise<ArchLensOrchestrator> {
@@ -151,7 +167,12 @@ export class ArchLensOrchestrator {
         // CLI --plugin rules plus any declared by the config's own `plugins` array.
         pluginRules: [...pluginRules, ...(await loadConfigPluginRules(options.config, root))],
       });
-      return new ArchLensOrchestrator(cwd, { ...options.config, rules });
+      return new ArchLensOrchestrator(cwd, {
+        root,
+        include: options.config.include,
+        exclude: options.config.exclude,
+        rules,
+      });
     }
 
     const loaded = await tryLoadArchLensConfig(cwd, options.configPath);
@@ -167,7 +188,12 @@ export class ArchLensOrchestrator {
         defaultRules,
         pluginRules: [...pluginRules, ...(await loadConfigPluginRules(loaded.config, root))],
       });
-      return new ArchLensOrchestrator(cwd, { ...loaded.config, root, rules });
+      return new ArchLensOrchestrator(cwd, {
+        root,
+        include: loaded.config.include,
+        exclude: loaded.config.exclude,
+        rules,
+      });
     }
 
     // No config anywhere: fall back to built-in defaults plus any plugin rules.
@@ -235,11 +261,11 @@ export class ArchLensOrchestrator {
 
     const violations: RuleViolation[] = [];
 
-    for (const rule of this.config.rules) {
-      // Each violation inherits its rule's severity unless the rule set its own.
+    for (const { rule, options: ruleOptions, severity } of this.config.rules) {
+      // Each violation takes the config-resolved severity unless the rule set its own.
       const tag = (violation: RuleViolation): RuleViolation => ({
         ...violation,
-        severity: violation.severity ?? rule.meta.severity,
+        severity: violation.severity ?? severity,
       });
       const collect = (payload: RuleViolation | RuleViolation[]): void => {
         violations.push(...(Array.isArray(payload) ? payload : [payload]).map(tag));
@@ -252,6 +278,7 @@ export class ArchLensOrchestrator {
         verbose: Boolean(options.verbose),
         dependencyGraph,
         graph,
+        options: ruleOptions,
         report: collect,
       };
 
@@ -271,7 +298,7 @@ export class ArchLensOrchestrator {
       /* fix-phase diagnostics are superseded by the re-analysis */
     };
 
-    for (const rule of this.config.rules) {
+    for (const { rule, options: ruleOptions } of this.config.rules) {
       if (typeof rule.fix !== 'function') {
         continue;
       }
@@ -283,6 +310,7 @@ export class ArchLensOrchestrator {
         verbose: Boolean(options.verbose),
         dependencyGraph: analysis.dependencyGraph,
         graph: analysis.graph,
+        options: ruleOptions,
         report: discard,
       });
     }
