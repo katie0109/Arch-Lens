@@ -103,10 +103,6 @@ importers:
         version: 5.0.10
 
   packages/rules:
-    dependencies:
-      '@arch-lens/plugins':
-        specifier: workspace:*
-        version: link:../plugins
     devDependencies:
       rimraf:
         specifier: ^5.0.5
