@@ -2,18 +2,23 @@ import { stat } from 'node:fs/promises';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 
-import type { ArchLensRule, RuleViolation } from '@arch-lens/rules';
+import type { ArchLensRule, Ownership, RuleViolation } from '@arch-lens/rules';
 import { loadBuiltInRules } from '@arch-lens/rules';
 
+import { applyBaseline } from '../baseline/baseline.js';
 import { tryLoadArchLensConfig } from '../config/load-config.js';
 import { scanWorkspaceFiles } from '../fs/file-scanner.js';
 import { buildArchitectureGraph } from '../graph/architecture-graph.js';
+import { buildProjectGraph } from '../graph/project-graph.js';
+import { computeAffected } from '../incremental/affected.js';
+import { loadOwnership } from '../ownership/codeowners.js';
 import { DependencyGraphCache } from '../parser/dependency-graph-cache.js';
 import { buildDependencyGraph, createDefaultResolver } from '../parser/ts-dependency-graph.js';
 import { loadPluginRules } from '../plugins/load-plugins.js';
 import { reportViolations } from '../reporter/console-reporter.js';
 import type {
   ArchLensConfig,
+  ProjectDefinition,
   ReportFormat,
   ScanOptions,
   ScanResult,
@@ -41,6 +46,7 @@ interface OrchestratorInit {
   root?: string;
   include?: string[];
   exclude?: string[];
+  projects?: ProjectDefinition[];
   rules: ResolvedRule[];
 }
 
@@ -49,6 +55,7 @@ interface WorkspaceAnalysis {
   files: string[];
   dependencyGraph: Awaited<ReturnType<typeof buildDependencyGraph>>;
   graph: ReturnType<typeof buildArchitectureGraph>;
+  projectGraph: ReturnType<typeof buildProjectGraph>;
 }
 
 const DEFAULT_TARGET_GLOB = '**/*.{ts,tsx,js,jsx}';
@@ -136,6 +143,7 @@ export class ArchLensOrchestrator {
       root: init.root ?? cwd,
       include: init.include ?? ['src/**/*.{ts,tsx,js,jsx}'],
       exclude: init.exclude ?? ['**/node_modules/**', '**/dist/**', '**/.turbo/**'],
+      projects: init.projects ?? [],
       rules: init.rules,
     };
   }
@@ -149,6 +157,7 @@ export class ArchLensOrchestrator {
       root: config.root,
       include: config.include,
       exclude: config.exclude,
+      projects: config.projects,
       rules,
     });
   }
@@ -171,6 +180,7 @@ export class ArchLensOrchestrator {
         root,
         include: options.config.include,
         exclude: options.config.exclude,
+        projects: options.config.projects,
         rules,
       });
     }
@@ -192,6 +202,7 @@ export class ArchLensOrchestrator {
         root,
         include: loaded.config.include,
         exclude: loaded.config.exclude,
+        projects: loaded.config.projects,
         rules,
       });
     }
@@ -214,24 +225,52 @@ export class ArchLensOrchestrator {
       this.dependencyCache.invalidate(absoluteChanged);
     }
 
+    // Code ownership (CODEOWNERS) is stable for the run; load it once and share it with rules.
+    const owners = await loadOwnership(this.config.root);
+
     // Detection pass: collect violations without printing anything.
-    let analysis = await this.analyze(options);
+    let analysis = await this.analyze(options, owners);
 
     if (options.fix) {
-      await this.applyFixes(analysis, options);
+      await this.applyFixes(analysis, options, owners);
       // Fixes may create or modify files, so drop the whole cache and re-analyze. The
       // reported result must reflect what remains AFTER fixing, not the pre-fix state.
       this.dependencyCache.invalidate();
-      analysis = await this.analyze(options);
+      analysis = await this.analyze(options, owners);
     }
 
-    // Reporter runs exactly once, at the very end, on stdout.
-    reportViolations(analysis.violations, { format: reportFormat, pretty: options.pretty });
+    let violations = analysis.violations;
+
+    // Incremental mode: keep only violations on files affected by the change (changed files
+    // plus their transitive dependents). Parsing is already incremental via the mtime cache.
+    if (options.affectedOnly && options.changedFiles && options.changedFiles.length > 0) {
+      const changedIds = options.changedFiles.map((file) =>
+        relative(this.config.root, resolve(this.config.root, file)).replace(/\\/g, '/'),
+      );
+      const affected = computeAffected(analysis.graph, changedIds);
+      violations = violations.filter(
+        (violation) => !violation.file || affected.has(violation.file.replace(/\\/g, '/')),
+      );
+    }
+
+    // Suppress baselined violations before anything is reported or counted.
+    let suppressedCount = 0;
+    if (options.baseline) {
+      const applied = applyBaseline(violations, options.baseline);
+      violations = applied.remaining;
+      suppressedCount = applied.suppressed;
+    }
+
+    // Reporter runs exactly once, at the very end, on stdout (unless silenced).
+    if (!options.silent) {
+      reportViolations(violations, { format: reportFormat, pretty: options.pretty });
+    }
 
     return {
-      violations: analysis.violations,
+      violations,
       files: analysis.files,
       durationMs: performance.now() - start,
+      suppressedCount,
     };
   }
 
@@ -240,7 +279,7 @@ export class ArchLensOrchestrator {
    * here; `context.report()` appends to the same collector so a single reporter call at the
    * end of {@link scan} owns all output.
    */
-  private async analyze(options: ScanOptions): Promise<WorkspaceAnalysis> {
+  private async analyze(options: ScanOptions, owners: Ownership): Promise<WorkspaceAnalysis> {
     const include = options.target
       ? await deriveTargetInclude(this.config.root, options.target)
       : this.config.include;
@@ -258,6 +297,7 @@ export class ArchLensOrchestrator {
     });
 
     const graph = buildArchitectureGraph(dependencyGraph, this.config.root);
+    const projectGraph = buildProjectGraph(graph, this.config.projects);
 
     const violations: RuleViolation[] = [];
 
@@ -278,6 +318,8 @@ export class ArchLensOrchestrator {
         verbose: Boolean(options.verbose),
         dependencyGraph,
         graph,
+        projectGraph,
+        owners,
         options: ruleOptions,
         report: collect,
       };
@@ -285,7 +327,7 @@ export class ArchLensOrchestrator {
       violations.push(...(await rule.check(context)).map(tag));
     }
 
-    return { violations, files, dependencyGraph, graph };
+    return { violations, files, dependencyGraph, graph, projectGraph };
   }
 
   /**
@@ -293,7 +335,11 @@ export class ArchLensOrchestrator {
    * intentionally discarded: the post-fix re-analysis is the single source of truth for the
    * violations that actually remain.
    */
-  private async applyFixes(analysis: WorkspaceAnalysis, options: ScanOptions): Promise<void> {
+  private async applyFixes(
+    analysis: WorkspaceAnalysis,
+    options: ScanOptions,
+    owners: Ownership,
+  ): Promise<void> {
     const discard = (): void => {
       /* fix-phase diagnostics are superseded by the re-analysis */
     };
@@ -310,6 +356,8 @@ export class ArchLensOrchestrator {
         verbose: Boolean(options.verbose),
         dependencyGraph: analysis.dependencyGraph,
         graph: analysis.graph,
+        projectGraph: analysis.projectGraph,
+        owners,
         options: ruleOptions,
         report: discard,
       });

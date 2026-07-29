@@ -1,6 +1,8 @@
 import type { RuleViolation } from '@arch-lens/rules';
 
-export type ReportFormat = 'table' | 'json' | 'list' | 'html' | 'markdown';
+import { buildSarif } from './sarif.js';
+
+export type ReportFormat = 'table' | 'json' | 'list' | 'html' | 'markdown' | 'sarif';
 
 export interface ReportSettings {
   format?: ReportFormat;
@@ -37,6 +39,12 @@ export function reportViolations(
 
     // eslint-disable-next-line no-console
     console.log(JSON.stringify(payload, null, settings.pretty ? 2 : undefined));
+    return;
+  }
+
+  if (format === 'sarif') {
+    // eslint-disable-next-line no-console
+    console.log(JSON.stringify(buildSarif(violations), null, settings.pretty ? 2 : undefined));
     return;
   }
 
