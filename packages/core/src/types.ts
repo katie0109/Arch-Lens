@@ -1,5 +1,6 @@
 import type { ArchLensRule, RuleViolation } from '@arch-lens/rules';
 
+import type { BaselineData } from './baseline/baseline.js';
 import type { ReportFormat } from './reporter/console-reporter.js';
 
 export interface ScanOptions {
@@ -9,6 +10,15 @@ export interface ScanOptions {
   reportFormat?: ReportFormat;
   pretty?: boolean;
   changedFiles?: string[];
+  /**
+   * Incremental mode: keep only violations on files affected by `changedFiles` (the changed
+   * files plus their transitive dependents). Requires `changedFiles`.
+   */
+  affectedOnly?: boolean;
+  /** When set, violations recorded in the baseline are suppressed before reporting. */
+  baseline?: BaselineData;
+  /** Skip the reporter and just return the result (used to capture violations, e.g. for baseline). */
+  silent?: boolean;
 }
 
 export interface InitOptions {
@@ -32,6 +42,8 @@ export interface ScanResult {
   violations: RuleViolation[];
   files: string[];
   durationMs: number;
+  /** How many violations the baseline suppressed (0 when no baseline was applied). */
+  suppressedCount: number;
 }
 
 /** ESLint-style severities used in the config's `rules` map. `warn` maps to `warning`. */
@@ -43,12 +55,20 @@ export type RuleSetting = ConfigSeverity | ['error' | 'warn', unknown];
 /** The ESLint-style rules map: rule id -> setting. */
 export type RulesMap = Record<string, RuleSetting>;
 
+/** Maps files (by regex over their root-relative path) to a named project for the project graph. */
+export interface ProjectDefinition {
+  name: string;
+  pattern: string;
+}
+
 export interface ArchLensConfig {
   root?: string;
   include?: string[];
   exclude?: string[];
   /** Plugin specifiers (local paths, `file:` URLs, or bare npm packages) to load rules from. */
   plugins?: string[];
+  /** Project definitions used to derive the project-level graph (`context.projectGraph`). */
+  projects?: ProjectDefinition[];
   /**
    * Either the legacy array of rule instances, or the ESLint-style map keyed by rule id.
    * In the map form, built-in and plugin rules are the registry and the map activates them.

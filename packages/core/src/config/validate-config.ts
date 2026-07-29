@@ -41,6 +41,19 @@ export function validateConfig(
     );
   }
 
+  if (config.projects !== undefined) {
+    if (
+      !Array.isArray(config.projects) ||
+      config.projects.some(
+        (p) => !isRecord(p) || typeof p.name !== 'string' || typeof p.pattern !== 'string',
+      )
+    ) {
+      throw new ConfigValidationError(
+        `Arch-Lens config at ${source} has a "projects" field that must be an array of { name, pattern }.`,
+      );
+    }
+  }
+
   if (Array.isArray(config.rules)) {
     validateRuleArray(config.rules, source);
   } else {
