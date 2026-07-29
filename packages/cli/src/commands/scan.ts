@@ -7,7 +7,7 @@ import { watch } from 'chokidar';
 
 import { EXIT_CODE, handleCliError } from '../utils/error-handling.js';
 
-type ReportMode = 'table' | 'json' | 'list' | 'html' | 'markdown';
+type ReportMode = 'table' | 'json' | 'list' | 'html' | 'markdown' | 'sarif';
 
 export interface ScanCommandOptions {
   config?: string;
@@ -28,12 +28,19 @@ export function normalizeReportMode(mode: string | undefined): ReportMode {
 
   const normalized = mode.toLowerCase();
 
-  if (normalized === 'json' || normalized === 'table' || normalized === 'list' || normalized === 'html' || normalized === 'markdown') {
+  if (
+    normalized === 'json' ||
+    normalized === 'table' ||
+    normalized === 'list' ||
+    normalized === 'html' ||
+    normalized === 'markdown' ||
+    normalized === 'sarif'
+  ) {
     return normalized;
   }
 
   throw new Error(
-    `Unknown report mode: ${mode}. Supported values are 'table', 'list', 'html', 'markdown', or 'json'.`,
+    `Unknown report mode: ${mode}. Supported values are 'table', 'list', 'html', 'markdown', 'sarif', or 'json'.`,
   );
 }
 
@@ -97,7 +104,7 @@ export function registerScanCommand(cli: CAC): void {
     .option('--config <path>', 'Path to an arch.config.ts file')
     .option('--fix', 'Attempt to automatically fix structural violations')
     .option('--verbose', 'Print verbose logs while scanning')
-    .option('--report <mode>', "Output mode for violations ('table' | 'list' | 'json' | 'html' | 'markdown')", {
+    .option('--report <mode>', "Output mode for violations ('table' | 'list' | 'json' | 'html' | 'markdown' | 'sarif')", {
       default: 'table',
     })
     .option(
