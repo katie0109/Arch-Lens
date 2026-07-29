@@ -80,6 +80,8 @@ export interface RuleContext {
   dependencyGraph: RuleDependencyGraph;
   /** Queryable architecture graph (dependencies, reachability, shortest path, SCCs). */
   graph: ArchitectureGraph;
+  /** Project-level graph derived from config `projects`. Empty when none are defined. */
+  projectGraph: ArchitectureGraph;
   /** Code ownership from CODEOWNERS. Empty when no CODEOWNERS file exists. */
   owners: Ownership;
   /** Options for this rule, from the config (`['warn', options]`). Undefined in the array form. */

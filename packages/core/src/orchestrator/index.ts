@@ -9,6 +9,7 @@ import { applyBaseline } from '../baseline/baseline.js';
 import { tryLoadArchLensConfig } from '../config/load-config.js';
 import { scanWorkspaceFiles } from '../fs/file-scanner.js';
 import { buildArchitectureGraph } from '../graph/architecture-graph.js';
+import { buildProjectGraph } from '../graph/project-graph.js';
 import { computeAffected } from '../incremental/affected.js';
 import { loadOwnership } from '../ownership/codeowners.js';
 import { DependencyGraphCache } from '../parser/dependency-graph-cache.js';
@@ -17,6 +18,7 @@ import { loadPluginRules } from '../plugins/load-plugins.js';
 import { reportViolations } from '../reporter/console-reporter.js';
 import type {
   ArchLensConfig,
+  ProjectDefinition,
   ReportFormat,
   ScanOptions,
   ScanResult,
@@ -44,6 +46,7 @@ interface OrchestratorInit {
   root?: string;
   include?: string[];
   exclude?: string[];
+  projects?: ProjectDefinition[];
   rules: ResolvedRule[];
 }
 
@@ -52,6 +55,7 @@ interface WorkspaceAnalysis {
   files: string[];
   dependencyGraph: Awaited<ReturnType<typeof buildDependencyGraph>>;
   graph: ReturnType<typeof buildArchitectureGraph>;
+  projectGraph: ReturnType<typeof buildProjectGraph>;
 }
 
 const DEFAULT_TARGET_GLOB = '**/*.{ts,tsx,js,jsx}';
@@ -139,6 +143,7 @@ export class ArchLensOrchestrator {
       root: init.root ?? cwd,
       include: init.include ?? ['src/**/*.{ts,tsx,js,jsx}'],
       exclude: init.exclude ?? ['**/node_modules/**', '**/dist/**', '**/.turbo/**'],
+      projects: init.projects ?? [],
       rules: init.rules,
     };
   }
@@ -152,6 +157,7 @@ export class ArchLensOrchestrator {
       root: config.root,
       include: config.include,
       exclude: config.exclude,
+      projects: config.projects,
       rules,
     });
   }
@@ -174,6 +180,7 @@ export class ArchLensOrchestrator {
         root,
         include: options.config.include,
         exclude: options.config.exclude,
+        projects: options.config.projects,
         rules,
       });
     }
@@ -195,6 +202,7 @@ export class ArchLensOrchestrator {
         root,
         include: loaded.config.include,
         exclude: loaded.config.exclude,
+        projects: loaded.config.projects,
         rules,
       });
     }
@@ -289,6 +297,7 @@ export class ArchLensOrchestrator {
     });
 
     const graph = buildArchitectureGraph(dependencyGraph, this.config.root);
+    const projectGraph = buildProjectGraph(graph, this.config.projects);
 
     const violations: RuleViolation[] = [];
 
@@ -309,6 +318,7 @@ export class ArchLensOrchestrator {
         verbose: Boolean(options.verbose),
         dependencyGraph,
         graph,
+        projectGraph,
         owners,
         options: ruleOptions,
         report: collect,
@@ -317,7 +327,7 @@ export class ArchLensOrchestrator {
       violations.push(...(await rule.check(context)).map(tag));
     }
 
-    return { violations, files, dependencyGraph, graph };
+    return { violations, files, dependencyGraph, graph, projectGraph };
   }
 
   /**
@@ -346,6 +356,7 @@ export class ArchLensOrchestrator {
         verbose: Boolean(options.verbose),
         dependencyGraph: analysis.dependencyGraph,
         graph: analysis.graph,
+        projectGraph: analysis.projectGraph,
         owners,
         options: ruleOptions,
         report: discard,
