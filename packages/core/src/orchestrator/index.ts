@@ -2,13 +2,14 @@ import { stat } from 'node:fs/promises';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 
-import type { ArchLensRule, RuleViolation } from '@arch-lens/rules';
+import type { ArchLensRule, Ownership, RuleViolation } from '@arch-lens/rules';
 import { loadBuiltInRules } from '@arch-lens/rules';
 
 import { applyBaseline } from '../baseline/baseline.js';
 import { tryLoadArchLensConfig } from '../config/load-config.js';
 import { scanWorkspaceFiles } from '../fs/file-scanner.js';
 import { buildArchitectureGraph } from '../graph/architecture-graph.js';
+import { loadOwnership } from '../ownership/codeowners.js';
 import { DependencyGraphCache } from '../parser/dependency-graph-cache.js';
 import { buildDependencyGraph, createDefaultResolver } from '../parser/ts-dependency-graph.js';
 import { loadPluginRules } from '../plugins/load-plugins.js';
@@ -215,15 +216,18 @@ export class ArchLensOrchestrator {
       this.dependencyCache.invalidate(absoluteChanged);
     }
 
+    // Code ownership (CODEOWNERS) is stable for the run; load it once and share it with rules.
+    const owners = await loadOwnership(this.config.root);
+
     // Detection pass: collect violations without printing anything.
-    let analysis = await this.analyze(options);
+    let analysis = await this.analyze(options, owners);
 
     if (options.fix) {
-      await this.applyFixes(analysis, options);
+      await this.applyFixes(analysis, options, owners);
       // Fixes may create or modify files, so drop the whole cache and re-analyze. The
       // reported result must reflect what remains AFTER fixing, not the pre-fix state.
       this.dependencyCache.invalidate();
-      analysis = await this.analyze(options);
+      analysis = await this.analyze(options, owners);
     }
 
     // Suppress baselined violations before anything is reported or counted.
@@ -253,7 +257,7 @@ export class ArchLensOrchestrator {
    * here; `context.report()` appends to the same collector so a single reporter call at the
    * end of {@link scan} owns all output.
    */
-  private async analyze(options: ScanOptions): Promise<WorkspaceAnalysis> {
+  private async analyze(options: ScanOptions, owners: Ownership): Promise<WorkspaceAnalysis> {
     const include = options.target
       ? await deriveTargetInclude(this.config.root, options.target)
       : this.config.include;
@@ -291,6 +295,7 @@ export class ArchLensOrchestrator {
         verbose: Boolean(options.verbose),
         dependencyGraph,
         graph,
+        owners,
         options: ruleOptions,
         report: collect,
       };
@@ -306,7 +311,11 @@ export class ArchLensOrchestrator {
    * intentionally discarded: the post-fix re-analysis is the single source of truth for the
    * violations that actually remain.
    */
-  private async applyFixes(analysis: WorkspaceAnalysis, options: ScanOptions): Promise<void> {
+  private async applyFixes(
+    analysis: WorkspaceAnalysis,
+    options: ScanOptions,
+    owners: Ownership,
+  ): Promise<void> {
     const discard = (): void => {
       /* fix-phase diagnostics are superseded by the re-analysis */
     };
@@ -323,6 +332,7 @@ export class ArchLensOrchestrator {
         verbose: Boolean(options.verbose),
         dependencyGraph: analysis.dependencyGraph,
         graph: analysis.graph,
+        owners,
         options: ruleOptions,
         report: discard,
       });

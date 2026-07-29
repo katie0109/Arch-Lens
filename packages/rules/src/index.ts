@@ -61,6 +61,16 @@ export interface ArchitectureGraph {
   stronglyConnectedComponents(): GraphNodeId[][];
 }
 
+/** Code ownership derived from a CODEOWNERS file (empty when none is present). */
+export interface Ownership {
+  /** Owners of a file per CODEOWNERS (last matching pattern wins), or [] when unowned. */
+  ownersOf(path: GraphNodeId): string[];
+  /** Whether `owner` (e.g. `@org/team`) owns `path`. */
+  hasOwner(path: GraphNodeId, owner: string): boolean;
+  /** The parsed CODEOWNERS entries in file order. */
+  entries(): Array<{ pattern: string; owners: string[] }>;
+}
+
 export interface RuleContext {
   root: string;
   files: string[];
@@ -70,6 +80,8 @@ export interface RuleContext {
   dependencyGraph: RuleDependencyGraph;
   /** Queryable architecture graph (dependencies, reachability, shortest path, SCCs). */
   graph: ArchitectureGraph;
+  /** Code ownership from CODEOWNERS. Empty when no CODEOWNERS file exists. */
+  owners: Ownership;
   /** Options for this rule, from the config (`['warn', options]`). Undefined in the array form. */
   options?: unknown;
   report?: (violations: RuleViolation | RuleViolation[]) => void;

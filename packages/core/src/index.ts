@@ -14,5 +14,12 @@ export type { ArchitectureGraph, GraphNodeId, GraphEdge } from '@arch-lens/rules
 export { loadPluginRules, resolvePluginUrl } from './plugins/load-plugins.js';
 export { computeBaseline, applyBaseline, isBaselineData } from './baseline/baseline.js';
 export type { BaselineData, AppliedBaseline } from './baseline/baseline.js';
+export {
+  loadOwnership,
+  buildOwnership,
+  parseCodeowners,
+  codeownersToRegExp,
+} from './ownership/codeowners.js';
+export type { Ownership } from '@arch-lens/rules';
 export { reportViolations } from './reporter/console-reporter.js';
 export type { ArchLensConfig } from './types.js';
