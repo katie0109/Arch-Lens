@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { cac } from 'cac';
 
+import { registerBaselineCommand } from './commands/baseline.js';
 import { registerInitCommand } from './commands/init.js';
 import { registerScanCommand } from './commands/scan.js';
 import { getPackageInfo } from './utils/package-info.js';
@@ -9,6 +10,7 @@ const cli = cac('arch-lens');
 
 registerScanCommand(cli);
 registerInitCommand(cli);
+registerBaselineCommand(cli);
 
 const packageInfo = getPackageInfo();
 const banner = `\nArch-Lens v${packageInfo.version ?? '0.0.0'}\nConventions should be enforced by tools, not by humans.\n`;

@@ -12,5 +12,7 @@ export { buildDependencyGraph, createDefaultResolver } from './parser/ts-depende
 export { buildArchitectureGraph } from './graph/architecture-graph.js';
 export type { ArchitectureGraph, GraphNodeId, GraphEdge } from '@arch-lens/rules';
 export { loadPluginRules, resolvePluginUrl } from './plugins/load-plugins.js';
+export { computeBaseline, applyBaseline, isBaselineData } from './baseline/baseline.js';
+export type { BaselineData, AppliedBaseline } from './baseline/baseline.js';
 export { reportViolations } from './reporter/console-reporter.js';
 export type { ArchLensConfig } from './types.js';

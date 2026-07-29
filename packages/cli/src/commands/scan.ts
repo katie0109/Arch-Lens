@@ -2,9 +2,11 @@ import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
 import { createArchLensOrchestrator, loadPluginRules } from '@arch-lens/core';
+import type { BaselineData } from '@arch-lens/core';
 import type { CAC } from 'cac';
 import { watch } from 'chokidar';
 
+import { loadBaselineFile, resolveBaselinePath } from '../utils/baseline-io.js';
 import { EXIT_CODE, handleCliError } from '../utils/error-handling.js';
 
 type ReportMode = 'table' | 'json' | 'list' | 'html' | 'markdown' | 'sarif';
@@ -19,6 +21,7 @@ export interface ScanCommandOptions {
   watch?: boolean;
   metrics?: string;
   allowViolations?: boolean;
+  baseline?: string | boolean;
 }
 
 export function normalizeReportMode(mode: string | undefined): ReportMode {
@@ -44,7 +47,7 @@ export function normalizeReportMode(mode: string | undefined): ReportMode {
   );
 }
 
-function normalizePluginOption(option: string | string[] | undefined): string[] {
+export function normalizePluginOption(option: string | string[] | undefined): string[] {
   if (!option) {
     return [];
   }
@@ -116,6 +119,7 @@ export function registerScanCommand(cli: CAC): void {
     .option('--watch', 'Watch for file changes and re-run the scan')
     .option('--metrics <path>', 'Write scan metrics summary JSON to the provided file path')
     .option('--allow-violations', 'Exit with code 0 even if violations are found (non-watch mode)')
+    .option('--baseline [path]', 'Suppress violations recorded in a baseline file; fail only on new ones')
     .action(async (target: string | undefined, options: ScanCommandOptions) => {
       try {
         const reportMode = normalizeReportMode(options.report);
@@ -125,6 +129,10 @@ export function registerScanCommand(cli: CAC): void {
           // Logs go to stderr so stdout carries only the report (critical for --report json).
           console.error(`[arch-lens] Loading plugins: ${pluginPaths.join(', ')}`);
         }
+
+        const baseline: BaselineData | undefined = options.baseline
+          ? await loadBaselineFile(resolveBaselinePath(options.baseline))
+          : undefined;
 
         const pluginRules = await loadPluginRules(pluginPaths);
 
@@ -148,10 +156,15 @@ export function registerScanCommand(cli: CAC): void {
             reportFormat: reportMode,
             pretty: Boolean(options.pretty),
             changedFiles,
+            baseline,
           });
 
           if (metricsPath) {
             await emitMetrics(metricsPath, result);
+          }
+
+          if (result.suppressedCount > 0) {
+            console.error(`[arch-lens] Baseline suppressed ${result.suppressedCount} known violation(s).`);
           }
 
           const errorCount = result.violations.filter((v) => v.severity !== 'warning').length;
