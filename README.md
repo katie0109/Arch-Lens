@@ -14,6 +14,7 @@ Arch-Lens는 대규모 프론트엔드 모노레포의 구조·의존성 컨벤�
 - **ESLint식 rules 맵**으로 규칙별 `off`/`warn`/`error`와 옵션을 지정합니다. `error`만 종료코드를 실패시키고(warning은 통과), `--report json`은 항상 단일 JSON 문서입니다.
 - **그래프 질의 API**(`isReachable`/`shortestPath`/`stronglyConnectedComponents`)를 규칙에 제공해, 단순 import 금지가 아니라 전이 의존·경로 기반 정책을 코드로 표현할 수 있습니다.
 - 팀 규칙을 **npm 패키지 플러그인**으로 배포하고, `--plugin @scope/rules` 또는 config의 `plugins` 배열로 로드합니다.
+- 도입성·CI 통합: **SARIF**(GitHub Code Scanning), **baseline**(기존 위반 억제·신규만 실패), **`--affected`**(변경분만 검사), **CODEOWNERS ownership**, **프로젝트 그래프**를 제공합니다.
 - mtime 기반 의존성 그래프 캐시와 `--watch`, `--metrics` 옵션, CI 파이프라인, 샘플 모노레포가 함께 제공됩니다.
 
 ---
@@ -38,11 +39,17 @@ pnpm --filter @arch-lens/cli exec arch-lens scan
 pnpm --filter @arch-lens/cli exec arch-lens scan --fix
 pnpm --filter @arch-lens/cli exec arch-lens scan --watch
 
-# 4) 리포트/메트릭
+# 4) 리포트/메트릭 (SARIF는 GitHub Code Scanning에 업로드)
 pnpm --filter @arch-lens/cli exec arch-lens scan --report html > report.html
+pnpm --filter @arch-lens/cli exec arch-lens scan --report sarif > arch-lens.sarif
 pnpm --filter @arch-lens/cli exec arch-lens scan --metrics ./metrics.json
 
-# 5) 샘플 프로젝트 체험
+# 5) 점진 도입 & 증분 검사
+pnpm --filter @arch-lens/cli exec arch-lens baseline           # 현재 위반 기록
+pnpm --filter @arch-lens/cli exec arch-lens scan --baseline    # 신규 위반만 실패
+pnpm --filter @arch-lens/cli exec arch-lens scan --affected --since origin/main
+
+# 6) 샘플 프로젝트 체험
 ./examples/monorepo-sample/scripts/run-arch-lens.sh
 ```
 
@@ -101,6 +108,52 @@ rules: {
 ```
 
 플러그인 제작은 [`docs/plugin-guide.md`](./docs/plugin-guide.md)를 참고하세요. `createRule`/`definePlugin` 헬퍼가 제공되며, 샘플 플러그인은 `packages/plugins`에서 확인할 수 있습니다. `--plugin <path|@scope/pkg>` 또는 config의 `plugins` 배열로 로드합니다.
+
+---
+
+## CI 통합 · 점진 도입
+
+### 기존 코드베이스에 도입 (baseline)
+
+한 번에 모든 위반을 고치지 않고도 도입할 수 있습니다. 현재 위반을 baseline으로 기록하면, 이후 스캔은 **신규 위반만** 실패시킵니다(기록된 위반은 억제). rule+file 카운트 기반이라 라인 이동·메시지 변경에 강합니다.
+
+```bash
+arch-lens baseline                 # 현재 위반을 arch-lens-baseline.json에 기록
+arch-lens scan --baseline          # 신규 위반만 실패 (기록된 위반은 억제)
+```
+
+### 변경분만 검사 (affected/incremental)
+
+큰 모노레포에서 PR 피드백을 빠르게 받으려면 변경 파일과 그에 **전이적으로 의존하는** 파일의 위반만 검사합니다. 파싱은 mtime 캐시로 이미 증분입니다.
+
+```bash
+arch-lens scan --affected --since origin/main          # git 변경분 기준
+arch-lens scan --affected --changed src/a.ts,src/b.ts  # 명시적 변경 파일
+```
+
+### GitHub Code Scanning (SARIF)
+
+```bash
+arch-lens scan --report sarif > arch-lens.sarif   # SARIF 2.1.0, github/codeql-action/upload-sarif로 업로드
+```
+
+### CODEOWNERS · 프로젝트 그래프
+
+규칙은 컨텍스트에서 **코드 소유권**과 **프로젝트 단위 그래프**를 함께 질의할 수 있습니다.
+
+- `context.owners` — CODEOWNERS(`ownersOf`/`hasOwner`, last-matching-wins)로 팀 경계 정책 표현
+- `context.projectGraph` — config `projects`로 파일 그래프를 패키지 단위로 집계, 파일 그래프와 동일한 질의 API 제공
+
+```ts
+// arch.config.ts — 프로젝트 정의 예시
+export default {
+  projects: [
+    { name: 'app', pattern: '^src/app/' },
+    { name: 'legacy', pattern: '^src/legacy/' },
+  ],
+  rules: { /* ... */ },
+};
+```
 
 ---
 
