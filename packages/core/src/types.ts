@@ -10,6 +10,11 @@ export interface ScanOptions {
   reportFormat?: ReportFormat;
   pretty?: boolean;
   changedFiles?: string[];
+  /**
+   * Incremental mode: keep only violations on files affected by `changedFiles` (the changed
+   * files plus their transitive dependents). Requires `changedFiles`.
+   */
+  affectedOnly?: boolean;
   /** When set, violations recorded in the baseline are suppressed before reporting. */
   baseline?: BaselineData;
   /** Skip the reporter and just return the result (used to capture violations, e.g. for baseline). */

@@ -7,6 +7,7 @@ import type { CAC } from 'cac';
 import { watch } from 'chokidar';
 
 import { loadBaselineFile, resolveBaselinePath } from '../utils/baseline-io.js';
+import { gitChangedSince, parseChangedList } from '../utils/changed-files.js';
 import { EXIT_CODE, handleCliError } from '../utils/error-handling.js';
 
 type ReportMode = 'table' | 'json' | 'list' | 'html' | 'markdown' | 'sarif';
@@ -22,6 +23,9 @@ export interface ScanCommandOptions {
   metrics?: string;
   allowViolations?: boolean;
   baseline?: string | boolean;
+  affected?: boolean;
+  changed?: string | string[];
+  since?: string;
 }
 
 export function normalizeReportMode(mode: string | undefined): ReportMode {
@@ -120,10 +124,22 @@ export function registerScanCommand(cli: CAC): void {
     .option('--metrics <path>', 'Write scan metrics summary JSON to the provided file path')
     .option('--allow-violations', 'Exit with code 0 even if violations are found (non-watch mode)')
     .option('--baseline [path]', 'Suppress violations recorded in a baseline file; fail only on new ones')
+    .option('--affected', 'Only report violations on changed files and their transitive dependents')
+    .option('--changed <files>', 'Changed files for --affected (comma/space separated)')
+    .option('--since <ref>', 'Derive changed files for --affected from `git diff --name-only <ref>`')
     .action(async (target: string | undefined, options: ScanCommandOptions) => {
       try {
         const reportMode = normalizeReportMode(options.report);
         const pluginPaths = normalizePluginOption(options.plugin);
+
+        const affectedOnly = Boolean(options.affected);
+        const affectedChangedFiles = affectedOnly
+          ? options.changed
+            ? parseChangedList(options.changed)
+            : options.since
+              ? gitChangedSince(options.since)
+              : []
+          : undefined;
 
         if (options.verbose && pluginPaths.length > 0) {
           // Logs go to stderr so stdout carries only the report (critical for --report json).
@@ -155,7 +171,8 @@ export function registerScanCommand(cli: CAC): void {
             verbose: Boolean(options.verbose),
             reportFormat: reportMode,
             pretty: Boolean(options.pretty),
-            changedFiles,
+            changedFiles: changedFiles ?? affectedChangedFiles,
+            affectedOnly,
             baseline,
           });
 
