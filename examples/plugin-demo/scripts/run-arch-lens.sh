@@ -16,5 +16,5 @@ if [ ! -f "$PLUGIN_PATH" ]; then
   exit 1
 fi
 
-echo "[Arch-Lens] Running plugin loading demo"
-node "$CLI_BIN" scan "${ROOT_DIR}/src" --config "$CONFIG_PATH" --plugin "$PLUGIN_PATH" --report table --allow-violations "$@"
+echo "[Arch-Lens] Running plugin loading demo (plugin declared in config.plugins)"
+node "$CLI_BIN" scan "${ROOT_DIR}/src" --config "$CONFIG_PATH" --report table --allow-violations "$@"
