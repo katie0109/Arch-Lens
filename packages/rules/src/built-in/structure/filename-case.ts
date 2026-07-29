@@ -56,7 +56,9 @@ function toDesiredCase(name: string, style: CaseStyle): string {
 }
 
 export function createFilenameCaseRule(options?: FilenameCaseRuleOptions): ArchLensRule {
-  const rules = normaliseOptions(options);
+  // Prefer config-provided options (map form) over options baked in at creation (array form).
+  const rulesFor = (context: RuleContext): FilenameCaseRuleEntry[] =>
+    context.options ? normaliseOptions(context.options as FilenameCaseRuleOptions) : normaliseOptions(options);
 
   return {
     id: 'structure/filename-case',
@@ -66,6 +68,7 @@ export function createFilenameCaseRule(options?: FilenameCaseRuleOptions): ArchL
       type: 'structure',
     },
     async check(context: RuleContext): Promise<RuleViolation[]> {
+      const rules = rulesFor(context);
       const violations: RuleViolation[] = [];
 
       for (const file of context.files) {
@@ -100,6 +103,8 @@ export function createFilenameCaseRule(options?: FilenameCaseRuleOptions): ArchL
       return violations;
     },
     async fix(context: RuleContext): Promise<void> {
+      const rules = rulesFor(context);
+
       for (const file of context.files) {
         const normalized = file.replace(/\\/g, '/');
 

@@ -27,8 +27,9 @@ describe('initializeProject', () => {
 
     expect(result.scaffolded).toBe(true);
     expect(existsSync(result.configPath)).toBe(true);
-    expect(Array.isArray(result.config.rules)).toBe(true);
-    expect(result.config.rules.length).toBeGreaterThan(0);
+    // The scaffolded config uses the ESLint-style rules map.
+    expect(Array.isArray(result.config.rules)).toBe(false);
+    expect(Object.keys(result.config.rules).length).toBeGreaterThan(0);
   });
 
   it('does not overwrite an existing config without force', async () => {

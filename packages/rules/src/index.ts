@@ -70,6 +70,8 @@ export interface RuleContext {
   dependencyGraph: RuleDependencyGraph;
   /** Queryable architecture graph (dependencies, reachability, shortest path, SCCs). */
   graph: ArchitectureGraph;
+  /** Options for this rule, from the config (`['warn', options]`). Undefined in the array form. */
+  options?: unknown;
   report?: (violations: RuleViolation | RuleViolation[]) => void;
 }
 
