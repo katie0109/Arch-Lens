@@ -9,6 +9,7 @@ import { applyBaseline } from '../baseline/baseline.js';
 import { tryLoadArchLensConfig } from '../config/load-config.js';
 import { scanWorkspaceFiles } from '../fs/file-scanner.js';
 import { buildArchitectureGraph } from '../graph/architecture-graph.js';
+import { computeAffected } from '../incremental/affected.js';
 import { loadOwnership } from '../ownership/codeowners.js';
 import { DependencyGraphCache } from '../parser/dependency-graph-cache.js';
 import { buildDependencyGraph, createDefaultResolver } from '../parser/ts-dependency-graph.js';
@@ -230,8 +231,21 @@ export class ArchLensOrchestrator {
       analysis = await this.analyze(options, owners);
     }
 
-    // Suppress baselined violations before anything is reported or counted.
     let violations = analysis.violations;
+
+    // Incremental mode: keep only violations on files affected by the change (changed files
+    // plus their transitive dependents). Parsing is already incremental via the mtime cache.
+    if (options.affectedOnly && options.changedFiles && options.changedFiles.length > 0) {
+      const changedIds = options.changedFiles.map((file) =>
+        relative(this.config.root, resolve(this.config.root, file)).replace(/\\/g, '/'),
+      );
+      const affected = computeAffected(analysis.graph, changedIds);
+      violations = violations.filter(
+        (violation) => !violation.file || affected.has(violation.file.replace(/\\/g, '/')),
+      );
+    }
+
+    // Suppress baselined violations before anything is reported or counted.
     let suppressedCount = 0;
     if (options.baseline) {
       const applied = applyBaseline(violations, options.baseline);

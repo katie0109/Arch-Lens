@@ -21,5 +21,6 @@ export {
   codeownersToRegExp,
 } from './ownership/codeowners.js';
 export type { Ownership } from '@arch-lens/rules';
+export { computeAffected } from './incremental/affected.js';
 export { reportViolations } from './reporter/console-reporter.js';
 export type { ArchLensConfig } from './types.js';
