@@ -12,7 +12,8 @@
     "typecheck": "pnpm -r run typecheck",
     "coverage": "vitest run --coverage",
     "release": "bash scripts/release.sh",
-    "clean": "pnpm -r run clean"
+    "clean": "pnpm -r run clean",
+    "bench": "node scripts/bench.mjs"
   },
   "devDependencies": {
     "@arch-lens/plugins": "workspace:*",
