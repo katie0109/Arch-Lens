@@ -2,7 +2,10 @@
 
 > **Tagline:** "Conventions should be enforced by tools, not by humans."
 
-![Coverage](https://img.shields.io/badge/coverage-ready--for--run-lightgrey?logo=vitest)
+[![CI](https://github.com/katie0109/Arch-Lens/actions/workflows/ci.yml/badge.svg)](https://github.com/katie0109/Arch-Lens/actions/workflows/ci.yml)
+![Coverage](https://img.shields.io/badge/coverage-74%25-brightgreen?logo=vitest)
+![License](https://img.shields.io/badge/license-MIT-blue)
+![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen?logo=node.js)
 
 Arch-Lens는 대규모 프론트엔드 모노레포의 구조·의존성 컨벤션을 **CLI 한 번으로 점검/자동 수정**할 수 있게 만드는 Rule Engine입니다. 규칙 세트는 기본 제공하지만, 각 팀이 원하는 규칙을 자유롭게 추가·삭제하거나 플러그인으로 배포할 수 있도록 설계했습니다.
 
