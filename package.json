@@ -1,7 +1,7 @@
 {
   "name": "arch-lens-monorepo",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.1.0-beta.1",
   "description": "Arch-Lens monorepo workspace for CLI, core engine, rules, and plugins.",
   "license": "MIT",
   "packageManager": "pnpm@8.15.4",
@@ -30,5 +30,9 @@
     "rimraf": "^5.0.5",
     "typescript": "^5.4.0",
     "vitest": "^1.2.2"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/katie0109/Arch-Lens.git"
   }
 }

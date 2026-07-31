@@ -1,6 +1,6 @@
 {
   "name": "@arch-lens/cli",
-  "version": "0.0.0",
+  "version": "0.1.0-beta.1",
   "description": "Command line interface for Arch-Lens.",
   "type": "module",
   "bin": {
@@ -16,11 +16,13 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "sideEffects": false,
   "engines": {
-    "node": ">=18.17"
+    "node": ">=20"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
@@ -48,5 +50,12 @@
   "license": "MIT",
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/katie0109/Arch-Lens.git",
+    "directory": "packages/cli"
+  },
+  "homepage": "https://github.com/katie0109/Arch-Lens#readme",
+  "bugs": "https://github.com/katie0109/Arch-Lens/issues"
 }
