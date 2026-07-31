@@ -18,7 +18,7 @@ Arch-Lens는 대규모 프론트엔드 모노레포의 구조·의존성 컨벤�
 - **그래프 질의 API**(`isReachable`/`shortestPath`/`stronglyConnectedComponents`)를 규칙에 제공해, 단순 import 금지가 아니라 전이 의존·경로 기반 정책을 코드로 표현할 수 있습니다.
 - 팀 규칙을 **npm 패키지 플러그인**으로 배포하고, `--plugin @scope/rules` 또는 config의 `plugins` 배열로 로드합니다.
 - 도입성·CI 통합: **SARIF**(GitHub Code Scanning), **baseline**(기존 위반 억제·신규만 실패), **`--affected`**(변경분만 검사), **CODEOWNERS ownership**, **프로젝트 그래프**를 제공합니다.
-- mtime 기반 의존성 그래프 캐시와 `--watch`, `--metrics` 옵션, CI 파이프라인, 샘플 모노레포가 함께 제공됩니다.
+- mtime 기반 의존성 그래프 캐시로 **10k 파일 warm 스캔 ~370ms**(cold 1.36s 대비 ~3.7×) — [벤치마크](./docs/benchmarks.md) 참고. `--watch`·`--metrics`, CI 파이프라인, 샘플 모노레포도 함께 제공됩니다.
 
 ---
 
@@ -157,6 +157,20 @@ export default {
   rules: { /* ... */ },
 };
 ```
+
+---
+
+## 성능 (벤치마크)
+
+합성 모노레포(features × modules + shared)에서 엔진(`orchestrator.scan`)을 측정한 결과입니다. mtime 캐시로 반복 스캔(CI·watch의 일반 경로)이 cold 대비 크게 빨라집니다.
+
+| Files | Cold | Warm (cached) | Incremental (`--affected`) |
+| ---: | ---: | ---: | ---: |
+| 1,000 | 197 ms | 38 ms | 36 ms |
+| 5,000 | 698 ms | 196 ms | 184 ms |
+| 10,000 | 1,363 ms | 370 ms | 359 ms |
+
+Apple M4 Pro, Node v26 기준(기기·규칙 세트에 따라 달라짐). 직접 재현: `pnpm bench`. 방법·해석은 [`docs/benchmarks.md`](./docs/benchmarks.md).
 
 ---
 
