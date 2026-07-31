@@ -1,6 +1,6 @@
 {
   "name": "@arch-lens/rules",
-  "version": "0.0.0",
+  "version": "0.1.0-beta.1",
   "description": "Built-in rules and rule type definitions for Arch-Lens.",
   "type": "module",
   "main": "dist/index.js",
@@ -13,7 +13,9 @@
     "./package.json": "./package.json"
   },
   "files": [
-    "dist"
+    "dist",
+    "README.md",
+    "LICENSE"
   ],
   "sideEffects": false,
   "engines": {
@@ -39,5 +41,12 @@
   "license": "MIT",
   "publishConfig": {
     "access": "public"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/katie0109/Arch-Lens.git",
+    "directory": "packages/rules"
+  },
+  "homepage": "https://github.com/katie0109/Arch-Lens#readme",
+  "bugs": "https://github.com/katie0109/Arch-Lens/issues"
 }
