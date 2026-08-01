@@ -1,6 +1,6 @@
 # Arch-Lens Plugin Guide
 
-Arch-Lens는 내장 규칙 외에도, 팀 고유의 컨벤션을 플러그인으로 묶어 배포할 수 있도록 **플러그인 SDK**를 제공합니다. 즉, 저장소에 포함된 규칙 조합은 데모일 뿐이며, 각 팀은 이 가이드를 따라 자신만의 규칙을 만들고 `loadBuiltInRules()` 결과와 결합해 사용할 수 있습니다. 이 문서는 SDK 개념부터 샘플 코드, CLI 연결까지 한 번에 살펴볼 수 있는 튜토리얼입니다.
+Arch-Lens는 내장 규칙 외에도, 팀 고유의 컨벤션을 플러그인으로 묶어 배포할 수 있도록 **플러그인 SDK**를 제공합니다. 즉, 저장소에 포함된 규칙 조합은 데모일 뿐이며, 각 팀은 이 가이드를 따라 자신만의 규칙을 만들어 config의 `plugins`+`rules` 맵으로 내장 규칙과 함께 활성화할 수 있습니다. 이 문서는 SDK 개념부터 샘플 코드, CLI 연결까지 한 번에 살펴볼 수 있는 튜토리얼입니다.
 
 ---
 
@@ -10,8 +10,8 @@ Arch-Lens는 내장 규칙 외에도, 팀 고유의 컨벤션을 플러그인으
 | --- | --- |
 | `createRule(rule)` | 타입 안전한 `PluginRule`을 생성합니다. 규칙 ID/메타/체크 로직을 작성하세요. |
 | `definePlugin({ meta, rules })` | 여러 규칙을 하나의 플러그인으로 묶습니다. `meta`에는 이름/버전을 기입합니다. |
-| `PluginRuleContext` | `root`, `files`, `fix`, `verbose`, `dependencyGraph`, `report()`에 접근할 수 있는 컨텍스트 객체 |
-| `PluginRuleViolation` | `ruleId`, `message`, `file`, `line`, `column`, `suggestedFix` 등을 담아 Reporter로 전달 |
+| `RuleContext`(`@arch-lens/rules`) | `root`, `files`, `fix`, `verbose`, **`graph`**, **`projectGraph`**, **`owners`**, **`options`**, `report()`에 접근하는 컨텍스트. 그래프 질의·소유권·프로젝트 경계·규칙 옵션을 사용할 수 있습니다. |
+| `RuleViolation` | `ruleId`, `message`, `severity`, `file`, `line`, `column`, `suggestedFix` 등을 담아 Reporter로 전달 |
 
 SDK 소스는 [`packages/plugins/src`](../packages/plugins/src)에서 확인할 수 있습니다.
 
@@ -92,33 +92,33 @@ ESM/TS 프로젝트라면 `tsup`, `tsc`, `vite` 등을 사용해 `dist/index.js`
 ## 3. CLI에서 플러그인 사용하기
 
 ### 3-1. `--plugin` 옵션
-dist 파일을 바로 넘기면 됩니다. 여러 플러그인은 콤마 또는 복수 옵션으로 전달할 수 있습니다.
+로컬 경로, `file:` URL, 또는 **bare npm 패키지 지정자**(`@scope/pkg`)를 넘길 수 있습니다. 여러 플러그인은 콤마 또는 복수 옵션으로 전달합니다.
 
 ```bash
-pnpm --filter @arch-lens/cli exec arch-lens scan src \
-  --plugin ./plugins/my-team/dist/index.js \
-  --plugin ./plugins/frontend-guidelines/index.cjs
+arch-lens scan src \
+  --plugin @your-scope/arch-rules \
+  --plugin ./plugins/frontend-guidelines/index.mjs
 ```
 
-### 3-2. 설정 파일에 등록
+### 3-2. 설정 파일에 등록 (권장)
+
+`plugins` 배열로 선언하고, 규칙은 `rules` 맵에서 **id로 활성화**합니다. 심각도(`off`/`warn`/`error`)와 옵션도 여기서 지정합니다.
 
 ```ts
 import type { ArchLensConfig } from '@arch-lens/core';
-import { loadBuiltInRules } from '@arch-lens/rules';
-import myTeamPlugin from '../plugins/my-team/dist/index.js';
 
 const config: ArchLensConfig = {
-  // ...
-  rules: [
-    ...loadBuiltInRules(),
-    ...myTeamPlugin.rules,
-  ],
+  plugins: ['@your-scope/arch-rules'],
+  rules: {
+    'your-scope/no-legacy-imports': 'error',
+    'your-scope/gateway-only': ['warn', { gateways: ['@company/api'] }],
+  },
 };
 
 export default config;
 ```
 
-> **주의:** 플러그인에서 규칙 ID가 중복되면 마지막에 로드된 규칙이 우선합니다. 팀 규칙이 내장 규칙을 덮어써야 한다면 동일 ID를 사용하고, `overrides` 옵션으로 빌트인을 제외하세요.
+> **주의:** 최종 규칙 집합에 동일 id가 둘 이상이면 config 오류로 스캔이 실패(exit 2)합니다. 규칙 옵션은 `context.options`로 전달되니, 규칙 구현에서 이를 읽어 동작을 조정하세요.
 
 ---
 
