@@ -14,14 +14,17 @@ Arch-Lens는 **CLI → Core Engine → Rules/Plugins → Reporter** 흐름으로
 
 | 모듈 | 경로 | 설명 |
 | --- | --- | --- |
-| CLI | `packages/cli/src` | `cac` 기반 명령어 정의 (`scan`, `init`, `help`). `--plugin`, `--report`, `--watch`, `--metrics`, `--config` 등 옵션 처리 |
-| Config Loader | `packages/core/src/config/load-config.ts` | `arch.config.ts`, `.js`, `.cjs`, `.mjs`, `.json`을 탐색 & ESM 동적 import |
-| Config Scaffold | `packages/core/src/config/scaffold-config.ts` | `arch-lens init` 실행 시 템플릿 생성 + 기존 파일 백업 (`.bak`) |
-| File Scanner | `packages/core/src/fs/file-scanner.ts` | `fast-glob`으로 include/exclude 패턴 기반 파일 수집 |
+| CLI | `packages/cli/src` | `cac` 기반 명령어 정의 (`scan`, `init`, `baseline`). `--plugin`, `--report`(sarif 포함), `--baseline`, `--affected`/`--since`, `--watch`, `--metrics`, `--config` 등 처리 |
+| Config Loader | `packages/core/src/config/load-config.ts` | `arch.config.ts`(jiti)·`.mjs`·`.cjs`·`.js`·`.json` 탐색 & 로드 + 검증 |
+| Config Scaffold | `packages/core/src/config/scaffold-config.ts` | `arch-lens init` 시 rules 맵 템플릿 생성 + 기존 파일 백업 (`.bak`) |
+| Rule Resolver | `packages/core/src/orchestrator/resolve-rules.ts` | 배열/맵 config를 `{rule, severity, options}`로 해석. id 레지스트리·중복 검사 |
 | Dependency Graph Builder | `packages/core/src/parser/ts-dependency-graph.ts` | TypeScript Compiler API로 import 그래프 생성 |
-| DependencyGraphCache | `packages/core/src/parser/dependency-graph-cache.ts` | 파일별 `mtimeMs`를 기억하여 재사용 가능한 AST를 캐싱 |
-| Rule Orchestrator | `packages/core/src/orchestrator/index.ts` | 규칙 실행 순서를 관리하고 `fix` 플래그에 따라 `rule.fix` 호출 |
-| Reporter | `packages/core/src/reporter/console-reporter.ts` | table/list/json/html/markdown 출력, `suggestedFix` 노출, verbose 로깅 |
+| Architecture / Project Graph | `packages/core/src/graph/*` | 파일·프로젝트 그래프를 질의 API(`createGraph`: reachability·shortestPath·Tarjan SCC)로 래핑 |
+| Ownership | `packages/core/src/ownership/codeowners.ts` | CODEOWNERS 파싱(last-wins)으로 `context.owners` 제공 |
+| Baseline / Incremental | `packages/core/src/baseline/*`, `incremental/*` | 기존 위반 억제 + 변경분 affected 계산 |
+| DependencyGraphCache | `packages/core/src/parser/dependency-graph-cache.ts` | 파일별 `mtimeMs` 기억으로 파싱 재사용(증분) |
+| Rule Orchestrator | `packages/core/src/orchestrator/index.ts` | 검출→(fix→재검사)→baseline/affected 필터→리포트 1회. `graph`/`projectGraph`/`owners`/`options` 주입 |
+| Reporter | `packages/core/src/reporter/console-reporter.ts` | table/list/json/html/markdown/**sarif** 출력, severity·suggestedFix 노출 |
 
 ---
 
