@@ -21,7 +21,7 @@ pnpm add -D @arch-lens/cli @arch-lens/core @arch-lens/rules
 pnpm --filter @arch-lens/cli exec arch-lens init --config arch.config.ts
 ```
 
-- `arch.config.ts`가 생성되며, 기본적으로 모든 내장 규칙이 포함됩니다.
+- `arch.config.ts`가 **ESLint식 rules 맵** 형태로 생성됩니다(규칙 id에 `off`/`warn`/`error`).
 - `--force` 옵션을 주면 기존 파일을 `.bak`로 백업한 뒤 덮어씁니다.
 
 ---
@@ -37,38 +37,38 @@ pnpm --filter @arch-lens/cli exec arch-lens scan --fix
 
 # report/metrics/watch 옵션
 pnpm --filter @arch-lens/cli exec arch-lens scan --report json --pretty
+pnpm --filter @arch-lens/cli exec arch-lens scan --report sarif > arch-lens.sarif
 pnpm --filter @arch-lens/cli exec arch-lens scan --metrics ./metrics.json
 pnpm --filter @arch-lens/cli exec arch-lens scan --watch
 ```
 
-위반이 발견되면 exit code 1과 함께 테이블/JSON/HTML 등 원하는 리포트 형식으로 출력됩니다. 구조 규칙은 누락 파일을 실제로 생성하거나 이동시키고, 의존성 규칙은 재구조화 가이드를 제공합니다.
+리포트 형식은 `table`·`list`·`json`·`html`·`markdown`·`sarif`(GitHub Code Scanning)를 지원합니다.
+
+**종료 코드**: `0` 정상 · `1` **error** 심각도 위반 존재(`warning`만 있으면 통과) · `2` config/plugin/runtime 오류. `--allow-violations`를 주면 위반이 있어도 `0`으로 종료합니다. 구조 규칙은 누락 파일을 실제로 생성/이동하고, 의존성 규칙은 재구조화 가이드를 제공합니다.
 
 ---
 
 ## 4. 규칙 커스터마이즈
 
-`arch.config.ts`에서 `loadBuiltInRules({ include, exclude, overrides })`를 사용하면 필요한 규칙만 선택할 수 있습니다. 플러그인으로 새로운 규칙을 만들어 추가하는 것도 가능합니다.
+`arch.config.ts`의 `rules` 맵에서 규칙 id별로 심각도(`off`/`warn`/`error`)와 옵션(`[severity, options]`)을 지정합니다. `plugins` 배열로 npm/로컬 플러그인을 선언하면 그 규칙도 id로 활성화됩니다.
 
 ```ts
-import { loadBuiltInRules } from '@arch-lens/rules';
 import type { ArchLensConfig } from '@arch-lens/core';
-import myPlugin from './plugins/my-team-plugin.js';
 
 const config: ArchLensConfig = {
-  root: process.cwd(),
-  rules: [
-    ...loadBuiltInRules({
-      include: ['structure/required-files', 'dependency/no-cross-layer'],
-      exclude: ['structure/no-loose-files'],
-    }),
-    ...myPlugin.rules,
-  ],
+  plugins: ['@your-scope/arch-rules'],
+  rules: {
+    'structure/required-files': 'error',
+    'structure/no-loose-files': 'off',
+    'dependency/no-cross-layer': ['error', { /* rule options */ }],
+    '@your-scope/no-legacy-import': 'error',
+  },
 };
 
 export default config;
 ```
 
-> 저장소의 기본 규칙은 데모를 위해 임의 구성되어 있습니다. 각 팀은 위와 같이 **필요한 규칙만 골라 쓰거나, 직접 만든 플러그인을 붙여** 자신만의 정책을 만들면 됩니다.
+> 배열 형식(`rules: [ruleInstance, ...]`)도 하위호환으로 지원합니다. 규칙 목록·옵션은 [`rules-reference.md`](./rules-reference.md)를 참고하세요.
 
 플러그인 SDK와 튜토리얼은 [`docs/plugin-guide.md`](./plugin-guide.md)에서 확인하세요.
 
@@ -80,8 +80,10 @@ export default config;
 ./examples/monorepo-sample/scripts/run-arch-lens.sh
 ```
 
-- CLI 및 샘플 플러그인을 자동 빌드한 뒤, 두 번의 스캔을 실행합니다.
-- `src/features/index.ts`를 일부러 비워 두었기 때문에 `structure/required-files` 위반이 출력되면 정상입니다.
+- CLI 및 샘플 플러그인을 자동 빌드한 뒤, 표 스캔과 임시 복사본에 대한 `--fix` 스캔을 실행합니다(두 스캔 모두 `--allow-violations`).
+- 여러 내장 규칙 위반을 일부러 남겨두었으니 위반 메시지가 출력되면 정상입니다.
+
+`examples/ci-adoption`, `examples/gateway-only` 등 기능별 예제도 함께 참고하세요.
 
 ---
 
@@ -89,7 +91,19 @@ export default config;
 
 ```yaml
 - name: Architecture guard
-  run: pnpm --filter @arch-lens/cli exec arch-lens scan
+  run: npx arch-lens scan                        # error 위반이 있으면 실패(exit 1)
+
+# 기존 코드베이스에 점진 도입: 신규 위반만 실패
+- run: npx arch-lens scan --baseline
+
+# PR에서 변경분만 검사 (변경 파일 + 전이 dependents)
+- run: npx arch-lens scan --affected --since origin/main
+
+# GitHub Code Scanning 업로드
+- run: npx arch-lens scan --report sarif --allow-violations > arch-lens.sarif
+- uses: github/codeql-action/upload-sarif@v3
+  with:
+    sarif_file: arch-lens.sarif
 ```
 
-CI에서 위반이 발견되면 작업이 실패(exit code 1)하므로, 아키텍처 규칙을 PR 단계에서 강제할 수 있습니다. `--report json`과 아티팩트 업로드를 조합하면 HTML/Markdown 리포트도 배포 가능합니다.
+CI에서 error 위반이 발견되면 작업이 실패하므로 PR 단계에서 아키텍처 규칙을 강제할 수 있습니다. 점진 도입(baseline)·증분 검사(`--affected`)·SARIF는 [메인 README의 "CI 통합·점진 도입"](../README.md#ci-통합--점진-도입)에 자세히 정리되어 있습니다.

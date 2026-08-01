@@ -9,6 +9,17 @@
 
 Arch-Lens는 대규모 프론트엔드 모노레포의 구조·의존성 컨벤션을 **CLI 한 번으로 점검/자동 수정**할 수 있게 만드는 Rule Engine입니다. 규칙 세트는 기본 제공하지만, 각 팀이 원하는 규칙을 자유롭게 추가·삭제하거나 플러그인으로 배포할 수 있도록 설계했습니다.
 
+```console
+$ arch-lens scan
+[Arch-Lens] ❌ [ERROR] [sample/gateway-only-access] "src/app/checkout.ts" reaches restricted
+  "src/legacy/db.ts" without passing a gateway (src/app/checkout.ts → src/legacy/db.ts).
+    ↳ Suggested fix: Route access through a gateway module, or add a dated waiver.
+$ echo $?
+1
+```
+
+> 단순 import 금지가 아니라 **그래프 경로**("직접 또는 전이적으로 legacy에 닿는가, gateway를 거쳤는가")를 규칙으로 검사합니다. 이 정책은 JSON 정책이나 import DSL로는 표현할 수 없습니다 — [`examples/gateway-only`](./examples/gateway-only) 참고.
+
 ---
 
 ## 왜 Arch-Lens인가요?
@@ -192,9 +203,10 @@ Apple M4 Pro, Node v26 기준(기기·규칙 세트에 따라 달라짐). 직접
 | 문서 | 설명 |
 | --- | --- |
 | [docs/getting-started.md](./docs/getting-started.md) | 설치, init/scan, CI 연동까지의 빠른 흐름 |
-| [docs/rules-reference.md](./docs/rules-reference.md) | 내장 구조/의존성 규칙 옵션과 override 전략 |
+| [docs/rules-reference.md](./docs/rules-reference.md) | 내장 구조/의존성 규칙 옵션과 rules 맵 사용법 |
 | [docs/plugin-guide.md](./docs/plugin-guide.md) | 팀 전용 규칙을 플러그인으로 만드는 튜토리얼 |
-| [docs/architecture.md](./docs/architecture.md) | 오케스트레이션, 캐싱, watch 모드 아키텍처 |
+| [docs/architecture.md](./docs/architecture.md) | 오케스트레이션·그래프·ownership·baseline·캐싱 아키텍처 |
+| [docs/benchmarks.md](./docs/benchmarks.md) | 성능 벤치마크 결과·방법·재현 절차 |
 
 ---
 
