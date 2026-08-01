@@ -2,8 +2,8 @@
 
 > **Tagline:** "Conventions should be enforced by tools, not by humans."
 
+[![npm](https://img.shields.io/npm/v/@arch-lens/cli?logo=npm)](https://www.npmjs.com/package/@arch-lens/cli)
 [![CI](https://github.com/katie0109/Arch-Lens/actions/workflows/ci.yml/badge.svg)](https://github.com/katie0109/Arch-Lens/actions/workflows/ci.yml)
-![Coverage](https://img.shields.io/badge/coverage-74%25-brightgreen?logo=vitest)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 ![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen?logo=node.js)
 
