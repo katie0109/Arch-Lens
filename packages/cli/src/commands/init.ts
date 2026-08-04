@@ -1,4 +1,4 @@
-import { initializeProject } from '@arch-lens/core';
+import { initializeProject } from 'arch-lens-core';
 import type { CAC } from 'cac';
 
 import { handleCliError } from '../utils/error-handling.js';

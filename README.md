@@ -1,16 +1,20 @@
-﻿# Arch-Lens
+# Arch-Lens
 
-> **Tagline:** "Conventions should be enforced by tools, not by humans."
+> **Conventions should be enforced by tools, not by humans.**
 
-[![npm](https://img.shields.io/npm/v/@arch-lens/cli?logo=npm)](https://www.npmjs.com/package/@arch-lens/cli)
 [![CI](https://github.com/katie0109/Arch-Lens/actions/workflows/ci.yml/badge.svg)](https://github.com/katie0109/Arch-Lens/actions/workflows/ci.yml)
-![License](https://img.shields.io/badge/license-MIT-blue)
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 ![Node](https://img.shields.io/badge/node-%3E%3D20-brightgreen?logo=node.js)
+![Status](https://img.shields.io/badge/status-beta-orange)
 
-Arch-Lens는 대규모 프론트엔드 모노레포의 구조·의존성 컨벤션을 **CLI 한 번으로 점검/자동 수정**할 수 있게 만드는 Rule Engine입니다. 규칙 세트는 기본 제공하지만, 각 팀이 원하는 규칙을 자유롭게 추가·삭제하거나 플러그인으로 배포할 수 있도록 설계했습니다.
+Arch-Lens는 TypeScript 코드베이스의 의존성 그래프를 만들고, 그 위에서 팀의 아키텍처 정책을 실행하는 **오픈소스 Rule Engine & CLI**입니다.
+
+단순히 `A 폴더에서 B 폴더를 import하지 않는다`는 경계 규칙을 넘어, 다음처럼 그래프 탐색이 필요한 정책을 TypeScript 규칙으로 작성할 수 있습니다.
+
+> 다른 팀의 legacy 영역에는 직접 또는 전이적으로 접근할 수 없고, 반드시 gateway를 거쳐야 한다. 마이그레이션 예외는 정해진 날짜에 자동 만료된다.
 
 ```console
-$ arch-lens scan
+$ arch-lens scan --report list
 [Arch-Lens] ❌ [ERROR] [sample/gateway-only-access] "src/app/checkout.ts" reaches restricted
   "src/legacy/db.ts" without passing a gateway (src/app/checkout.ts → src/legacy/db.ts).
     ↳ Suggested fix: Route access through a gateway module, or add a dated waiver.
@@ -18,228 +22,329 @@ $ echo $?
 1
 ```
 
-> 단순 import 금지가 아니라 **그래프 경로**("직접 또는 전이적으로 legacy에 닿는가, gateway를 거쳤는가")를 규칙으로 검사합니다. 이 정책은 JSON 정책이나 import DSL로는 표현할 수 없습니다 — [`examples/gateway-only`](./examples/gateway-only) 참고.
+> [!IMPORTANT]
+> 첫 공식 npm 베타는 `arch-lens`라는 이름으로 배포 준비 중입니다. npm의 `@arch-lens/cli`와 `@arch-lens/core`는 이 프로젝트와 관계없는 패키지이므로 설치하지 마세요. 실제 게시 전까지는 이 저장소를 체크아웃해 실행할 수 있습니다.
 
 ---
 
-## 왜 Arch-Lens인가요?
+## 프로젝트를 만든 이유
 
-- `arch-lens scan` 한 번으로 구조/의존성 위반을 탐지하고, auto-fix 가능한 항목을 즉시 수정합니다.
-- **ESLint식 rules 맵**으로 규칙별 `off`/`warn`/`error`와 옵션을 지정합니다. `error`만 종료코드를 실패시키고(warning은 통과), `--report json`은 항상 단일 JSON 문서입니다.
-- **그래프 질의 API**(`isReachable`/`shortestPath`/`stronglyConnectedComponents`)를 규칙에 제공해, 단순 import 금지가 아니라 전이 의존·경로 기반 정책을 코드로 표현할 수 있습니다.
-- 팀 규칙을 **npm 패키지 플러그인**으로 배포하고, `--plugin @scope/rules` 또는 config의 `plugins` 배열로 로드합니다.
-- 도입성·CI 통합: **SARIF**(GitHub Code Scanning), **baseline**(기존 위반 억제·신규만 실패), **`--affected`**(변경분만 검사), **CODEOWNERS ownership**, **프로젝트 그래프**를 제공합니다.
-- mtime 기반 의존성 그래프 캐시로 **10k 파일 warm 스캔 ~370ms**(cold 1.36s 대비 ~3.7×) — [벤치마크](./docs/benchmarks.md) 참고. `--watch`·`--metrics`, CI 파이프라인, 샘플 모노레포도 함께 제공됩니다.
+프론트엔드 모노레포가 커지면 아키텍처 규칙은 문서와 코드 리뷰에 의존하기 쉽습니다.
 
----
+- `feature`가 다른 feature의 내부 구현을 직접 참조하지 않는가?
+- 오래된 모듈에 접근할 때 지정된 gateway를 거치는가?
+- 신규 코드가 기존 순환 의존성을 더 악화시키지 않는가?
+- 특정 팀이 소유한 영역을 다른 팀이 우회해서 사용하지 않는가?
 
-## 빠른 시작
+경로 기반 DSL은 단순한 import 허용·금지에는 강하지만, 최단 경로·전이 의존성·소유권·만료일이 있는 예외처럼 **조직마다 다른 알고리즘**을 표현하기 어렵습니다.
 
-```bash
-pnpm install
+Arch-Lens는 이 간극을 해결하기 위해 다음 구조를 선택했습니다.
 
-# 프로젝트에 CLI만 추가하고 싶다면
-pnpm add -D @arch-lens/cli @arch-lens/core @arch-lens/rules
+```text
+TypeScript source
+    ↓ parse & resolve
+File / Project dependency graph
+    ↓ query API
+Built-in rules + executable TypeScript plugins
+    ↓
+CLI report · CI gate · SARIF · baseline · affected scan
 ```
 
-```bash
-# 1) 설정 파일 생성
-pnpm --filter @arch-lens/cli exec arch-lens init --config arch.config.ts
+---
 
-# 2) 규칙 검사
-pnpm --filter @arch-lens/cli exec arch-lens scan
+## 무엇이 다른가요?
 
-# 3) 자동 수정 & Watch 모드
-pnpm --filter @arch-lens/cli exec arch-lens scan --fix
-pnpm --filter @arch-lens/cli exec arch-lens scan --watch
+Arch-Lens의 중심은 또 하나의 import 검사기를 만드는 것이 아니라, **전체 그래프 위에서 실행되는 규칙 런타임**을 제공하는 것입니다.
 
-# 4) 리포트/메트릭 (SARIF는 GitHub Code Scanning에 업로드)
-pnpm --filter @arch-lens/cli exec arch-lens scan --report html > report.html
-pnpm --filter @arch-lens/cli exec arch-lens scan --report sarif > arch-lens.sarif
-pnpm --filter @arch-lens/cli exec arch-lens scan --metrics ./metrics.json
+| 접근 방식 | 장점 | 제한 | Arch-Lens의 선택 |
+| --- | --- | --- | --- |
+| ESLint boundary rule | 에디터 피드백과 생태계 | 파일·import 단위 규칙에 적합 | 독립 CLI에서 전체 그래프 규칙 실행 |
+| JSON/DSL 정책 | 안전하고 설정 공유가 쉬움 | 임의의 그래프 알고리즘 표현이 어려움 | TypeScript 함수로 규칙 작성 |
+| Architecture test | 테스트 코드로 자유롭게 검사 | 별도 테스트 러너와 fixture가 필요 | 설정 기반 CLI와 플러그인 자동 로딩 |
+| Nx 조직 규칙 | 프로젝트 그래프와 조직 정책 | Nx 및 상용 기능에 종속될 수 있음 | Nx 비종속 MIT 오픈소스 |
 
-# 5) 점진 도입 & 증분 검사
-pnpm --filter @arch-lens/cli exec arch-lens baseline           # 현재 위반 기록
-pnpm --filter @arch-lens/cli exec arch-lens scan --baseline    # 신규 위반만 실패
-pnpm --filter @arch-lens/cli exec arch-lens scan --affected --since origin/main
+핵심 차별점은 다음 네 가지입니다.
 
-# 6) 샘플 프로젝트 체험
-./examples/monorepo-sample/scripts/run-arch-lens.sh
-```
-
-자세한 온보딩 흐름은 [`docs/getting-started.md`](./docs/getting-started.md)에서 단계별로 정리되어 있습니다.
+1. **실행형 Rule Plugin** — 로컬 파일과 bare npm specifier에서 TypeScript/JavaScript 규칙을 로드합니다.
+2. **Graph Query API** — 직접 의존성뿐 아니라 reachability, shortest path, SCC를 규칙에 제공합니다.
+3. **점진적 도입** — baseline으로 기존 위반을 수용하고 신규 위반만 CI에서 차단합니다.
+4. **CI 친화적 출력** — severity 기반 종료 코드, 단일 JSON, SARIF, affected 필터를 제공합니다.
 
 ---
 
-## 규칙 설정 (rules 맵)
+## 대표 시나리오: gateway-only-access
 
-`arch-lens init`이 생성하는 설정은 **ESLint식 rules 맵**입니다. 규칙 id에 `off`/`warn`/`error`를 지정하고, 옵션이 필요하면 `[severity, options]` 튜플로 전달합니다. 내장 규칙과 플러그인 규칙은 모두 id로 참조합니다.
+[`examples/gateway-only`](./examples/gateway-only)는 Arch-Lens의 방향을 가장 잘 보여주는 예제입니다.
 
 ```ts
-// arch.config.ts 예시
-import type { ArchLensConfig } from '@arch-lens/core';
+export default {
+  plugins: ['../../packages/plugins/dist/sample/gateway-only-access.js'],
+  rules: {
+    'sample/gateway-only-access': [
+      'error',
+      {
+        restricted: ['^src/legacy/'],
+        gateways: ['^src/gateway/'],
+        // 필요한 경우에만 기간 한정 예외를 활성화합니다.
+        // waivers: [{
+        //   from: '^src/app/checkout\\.ts$',
+        //   until: '2026-12-31',
+        //   reason: 'legacy migration',
+        // }],
+      },
+    ],
+  },
+};
+```
+
+이 규칙은 다음을 함께 사용합니다.
+
+- `graph.isReachable()`로 제한 영역 도달 여부 확인
+- `graph.shortestPath()`로 위반 경로 제시
+- gateway가 경로에 포함됐는지 검사
+- 날짜가 지난 waiver 자동 무효화
+- config options와 severity를 플러그인에 전달
+
+```bash
+pnpm build
+./examples/gateway-only/scripts/run-arch-lens.sh
+```
+
+---
+
+## 핵심 구현
+
+### 1. TypeScript 의존성 그래프
+
+TypeScript Compiler API의 module resolution을 이용해 상대 경로와 `tsconfig` path alias를 실제 파일로 해석합니다. 분석 결과는 안정적인 질의 인터페이스로 감쌉니다.
+
+```ts
+interface ArchitectureGraph {
+  nodes(): GraphNodeId[];
+  edges(): GraphEdge[];
+
+  dependenciesOf(node: GraphNodeId): GraphNodeId[];
+  dependentsOf(node: GraphNodeId): GraphNodeId[];
+  isReachable(from: GraphNodeId, to: GraphNodeId): boolean;
+  shortestPath(from: GraphNodeId, to: GraphNodeId): GraphNodeId[] | null;
+  stronglyConnectedComponents(): GraphNodeId[][];
+}
+```
+
+- BFS 기반 reachability와 shortest path
+- Tarjan 알고리즘 기반 strongly connected components
+- 파일 그래프를 config의 프로젝트 정의로 집계한 project graph
+- mtime 기반 parse cache와 watch mode 무효화
+
+### 2. ESLint식 규칙 설정
+
+규칙별로 `off`, `warn`, `error`와 options를 지정합니다. warning만 있으면 CI는 통과하고 error가 하나라도 있으면 종료 코드 1을 반환합니다.
+
+```ts
+import type { ArchLensConfig } from 'arch-lens';
 
 const config: ArchLensConfig = {
-  // root를 생략하면 이 설정 파일이 위치한 디렉터리가 기준이 됩니다.
   include: ['src/**/*.{ts,tsx}'],
   exclude: ['**/dist/**', '**/__tests__/**'],
-  // npm/로컬 플러그인을 선언하면 그 규칙들을 id로 활성화할 수 있습니다.
-  plugins: ['@your-scope/arch-lens-rules'],
+  plugins: ['./plugins/team-rules.mjs'],
   rules: {
     'structure/required-files': 'error',
-    'structure/no-loose-files': 'off',
     'structure/filename-case': [
       'warn',
       { rules: [{ test: '^src/components/.+\\.tsx$', style: 'pascal-case' }] },
     ],
-    'dependency/no-cross-layer': 'error',
-    // 플러그인이 제공하는 규칙도 동일하게 id로 켭니다.
-    '@your-scope/no-legacy-import': 'error',
+    'team/gateway-only-access': ['error', { gateways: ['^src/gateway/'] }],
   },
 };
 
 export default config;
 ```
 
-- `error`가 하나라도 있으면 `scan`은 종료코드 1로 실패하고, `warning`만 있으면 통과(0)합니다.
-- 기존 **배열 형식**(`rules: [ruleInstance, ...]`)도 그대로 지원하므로 점진적으로 옮길 수 있습니다.
+### 3. 안전한 fix 파이프라인
 
-### 그래프 기반 실행형 규칙 · 플러그인
-
-규칙은 `context.graph`로 **아키텍처 그래프**를 질의할 수 있습니다 — `dependenciesOf`, `dependentsOf`, `isReachable`, `shortestPath`, `stronglyConnectedComponents`. 이 덕분에 "특정 영역에 **직접 또는 전이적으로** 접근 금지, 반드시 gateway 경유"처럼 경로 기반 정책을 코드로 표현할 수 있습니다.
-
-대표 예제 [`examples/gateway-only`](./examples/gateway-only)는 그래프 탐색 + 옵션 + **만료일 있는 waiver**를 결합한 `sample/gateway-only-access` 규칙을 플러그인으로 로드해 시연합니다.
-
-```ts
-plugins: ['@company/arch-lens-rules'],
-rules: {
-  'sample/gateway-only-access': ['error', {
-    restricted: ['^src/legacy/'],
-    gateways: ['^src/gateway/'],
-    waivers: [{ from: '^src/app/checkout\\.ts$', until: '2026-12-31', reason: 'migration' }],
-  }],
-},
+```text
+detect → apply fixes → invalidate graph cache → rescan → report once
 ```
 
-플러그인 제작은 [`docs/plugin-guide.md`](./docs/plugin-guide.md)를 참고하세요. `createRule`/`definePlugin` 헬퍼가 제공되며, 샘플 플러그인은 `packages/plugins`에서 확인할 수 있습니다. `--plugin <path|@scope/pkg>` 또는 config의 `plugins` 배열로 로드합니다.
+`--fix` 결과는 수정 전 위반이 아니라 **수정 후 남은 위반**을 기준으로 합니다. 규칙 실행 중에는 결과를 collector에 모으고, 최종 Reporter가 stdout에 한 번만 출력하므로 JSON 결과도 항상 하나의 문서로 유지됩니다.
 
----
+### 4. 기존 코드베이스 도입 전략
 
-## CI 통합 · 점진 도입
-
-### 기존 코드베이스에 도입 (baseline)
-
-한 번에 모든 위반을 고치지 않고도 도입할 수 있습니다. 현재 위반을 baseline으로 기록하면, 이후 스캔은 **신규 위반만** 실패시킵니다(기록된 위반은 억제). rule+file 카운트 기반이라 라인 이동·메시지 변경에 강합니다.
+- **baseline**: 현재 위반을 기록하고 이후 새 위반만 실패
+- **affected**: 변경 파일과 전이 dependents에 해당하는 결과만 보고
+- **CODEOWNERS**: 규칙에서 파일 소유 팀 조회
+- **project graph**: 파일 그래프를 package/domain 단위로 집계
+- **SARIF**: GitHub Code Scanning과 연동
 
 ```bash
-arch-lens baseline                 # 현재 위반을 arch-lens-baseline.json에 기록
-arch-lens scan --baseline          # 신규 위반만 실패 (기록된 위반은 억제)
-```
-
-### 변경분만 검사 (affected/incremental)
-
-큰 모노레포에서 PR 피드백을 빠르게 받으려면 변경 파일과 그에 **전이적으로 의존하는** 파일의 위반만 검사합니다. 파싱은 mtime 캐시로 이미 증분입니다.
-
-```bash
-arch-lens scan --affected --since origin/main          # git 변경분 기준
-arch-lens scan --affected --changed src/a.ts,src/b.ts  # 명시적 변경 파일
-```
-
-### GitHub Code Scanning (SARIF)
-
-```bash
-arch-lens scan --report sarif > arch-lens.sarif   # SARIF 2.1.0, github/codeql-action/upload-sarif로 업로드
-```
-
-### CODEOWNERS · 프로젝트 그래프
-
-규칙은 컨텍스트에서 **코드 소유권**과 **프로젝트 단위 그래프**를 함께 질의할 수 있습니다.
-
-- `context.owners` — CODEOWNERS(`ownersOf`/`hasOwner`, last-matching-wins)로 팀 경계 정책 표현
-- `context.projectGraph` — config `projects`로 파일 그래프를 패키지 단위로 집계, 파일 그래프와 동일한 질의 API 제공
-
-```ts
-// arch.config.ts — 프로젝트 정의 예시
-export default {
-  projects: [
-    { name: 'app', pattern: '^src/app/' },
-    { name: 'legacy', pattern: '^src/legacy/' },
-  ],
-  rules: { /* ... */ },
-};
+arch-lens baseline
+arch-lens scan --baseline
+arch-lens scan --affected --since origin/main
+arch-lens scan --report sarif > arch-lens.sarif
 ```
 
 ---
 
-## 성능 (벤치마크)
+## 아키텍처
 
-합성 모노레포(features × modules + shared)에서 엔진(`orchestrator.scan`)을 측정한 결과입니다. mtime 캐시로 반복 스캔(CI·watch의 일반 경로)이 cold 대비 크게 빨라집니다.
+![Arch-Lens 실행 파이프라인](./docs/assets/Architecture.svg)
 
-| Files | Cold | Warm (cached) | Incremental (`--affected`) |
-| ---: | ---: | ---: | ---: |
-| 1,000 | 197 ms | 38 ms | 36 ms |
-| 5,000 | 698 ms | 196 ms | 184 ms |
-| 10,000 | 1,363 ms | 370 ms | 359 ms |
+| 패키지 | 역할 |
+| --- | --- |
+| `arch-lens` | `init`, `scan`, `baseline`, watch와 CLI lifecycle |
+| `arch-lens-core` | config, file scan, dependency graph, orchestrator, reporter |
+| `arch-lens-rules` | 공통 Rule/Graph 타입과 내장 규칙 8종 |
+| `arch-lens-plugin-kit` | `createRule`, `definePlugin`, 실행형 규칙 예제 |
 
-Apple M4 Pro, Node v26 기준(기기·규칙 세트에 따라 달라짐). 직접 재현: `pnpm bench`. 방법·해석은 [`docs/benchmarks.md`](./docs/benchmarks.md).
+```text
+packages/
+├── cli/
+├── core/
+├── rules/
+└── plugins/
+
+examples/
+├── gateway-only/      # 전이 의존성과 waiver를 사용하는 대표 플러그인
+├── ci-adoption/       # baseline, affected, SARIF
+├── monorepo-sample/   # built-in rules와 auto-fix
+└── plugin-demo/       # 로컬 플러그인 로딩
+```
+
+더 자세한 설계는 [`docs/architecture.md`](./docs/architecture.md)에서 확인할 수 있습니다.
 
 ---
 
-## 예제 모노레포 체험하기
+## 실행하기
 
-- `examples/monorepo-sample/scripts/run-arch-lens.sh`는 CLI와 샘플 플러그인을 한 번에 실행해 주는 스크립트입니다.
-- 스크립트는 필요 시 CLI/플러그인을 빌드한 뒤 ① 표 형식 스캔과 ② `--fix` 스캔(JSON)을 실행합니다. 두 스캔 모두 `--allow-violations`로 실행되므로 위반이 있어도 스크립트는 정상 종료(exit 0)합니다.
-- 데모용으로 여러 내장 규칙 위반(기능별 `index.ts` 누락 → `structure/required-feature-index`, 교차 기능 import, allow-list 위반 등)을 일부러 남겨두었으니, 위반 메시지가 출력되면 정상 동작입니다.
-- `--fix`는 커밋된 예제를 건드리지 않도록 임시 디렉터리 복사본에서만 실행됩니다.
+공식 npm 배포 전까지 저장소에서 다음과 같이 실행합니다.
 
 ```bash
+git clone https://github.com/katie0109/Arch-Lens.git
+cd Arch-Lens
+
+pnpm install --frozen-lockfile
+pnpm build
+
+node packages/cli/dist/index.js --help
+node packages/cli/dist/index.js scan examples/monorepo-sample/src \
+  --report table \
+  --allow-violations
+```
+
+설정 파일 생성과 기본 워크플로:
+
+```bash
+pnpm --filter arch-lens exec arch-lens init --config arch.config.ts
+pnpm --filter arch-lens exec arch-lens scan
+pnpm --filter arch-lens exec arch-lens scan --fix
+pnpm --filter arch-lens exec arch-lens scan --watch
+```
+
+대표 예제를 한 번에 실행할 수도 있습니다.
+
+```bash
+./examples/gateway-only/scripts/run-arch-lens.sh
+./examples/ci-adoption/scripts/run-arch-lens.sh
 ./examples/monorepo-sample/scripts/run-arch-lens.sh
 ```
 
 ---
 
-## 문서 & 자료 모음
+## 제공 기능
 
-| 문서 | 설명 |
-| --- | --- |
-| [docs/getting-started.md](./docs/getting-started.md) | 설치, init/scan, CI 연동까지의 빠른 흐름 |
-| [docs/rules-reference.md](./docs/rules-reference.md) | 내장 구조/의존성 규칙 옵션과 rules 맵 사용법 |
-| [docs/plugin-guide.md](./docs/plugin-guide.md) | 팀 전용 규칙을 플러그인으로 만드는 튜토리얼 |
-| [docs/architecture.md](./docs/architecture.md) | 오케스트레이션·그래프·ownership·baseline·캐싱 아키텍처 |
-| [docs/benchmarks.md](./docs/benchmarks.md) | 성능 벤치마크 결과·방법·재현 절차 |
+### Built-in Rules
+
+| Rule | 설명 | Fix |
+| --- | --- | :---: |
+| `structure/required-feature-index` | feature별 public entry point 강제 | ✓ |
+| `structure/required-files` | 디렉터리별 필수 파일 검사 | ✓ |
+| `structure/filename-case` | 파일명 casing 정책 | ✓ |
+| `structure/no-loose-files` | 지정 루트의 loose file 방지 | ✓ |
+| `dependency/no-cross-feature-import` | feature 간 내부 구현 직접 참조 차단 |  |
+| `dependency/no-cross-layer` | layer별 허용 의존 방향 검사 |  |
+| `dependency/no-circular` | 순환 의존성과 경로 탐지 |  |
+| `dependency/allow-list` | 정규식 기반 dependency allow-list |  |
+
+### Reporter & CI
+
+- table, list, JSON, HTML, Markdown, SARIF
+- severity 기반 종료 코드
+- `--allow-violations`를 이용한 비차단 분석
+- `--metrics` JSON 성능·위반 요약
+- Node 20/22 GitHub Actions matrix
+- packed tarball을 새 프로젝트에 설치하는 consumer smoke test
 
 ---
 
-## 개발자 노트
+## 성능
 
-- `pnpm lint`, `pnpm typecheck`, `pnpm test`로 품질 게이트를 통과한 뒤 PR을 제출해주세요.
-- 샘플 규칙/플러그인을 수정했다면 반드시 README·Docs·CHANGELOG를 함께 업데이트합니다.
-- 저장소 전체 빌드: `pnpm build`. 특정 패키지 빌드: `pnpm --filter <pkg> run build`.
+합성 TypeScript 모노레포에서 `orchestrator.scan()`을 측정한 결과입니다.
 
-### 샘플 리포트(JSON) 만들기
+| Files | Cold | Warm cache | Incremental / affected |
+| ---: | ---: | ---: | ---: |
+| 1,000 | 197 ms | 38 ms | 36 ms |
+| 5,000 | 698 ms | 196 ms | 184 ms |
+| 10,000 | 1,363 ms | 370 ms | 359 ms |
 
-CI와 동일한 JSON 리포트를 로컬에서도 보고 싶다면 아래 순서를 따르면 됩니다.
+Apple M4 Pro, Node.js v26에서 측정했습니다. CLI 시작 시간은 제외되며 기기·규칙·그래프 형태에 따라 결과가 달라질 수 있습니다.
 
 ```bash
-pnpm --filter @arch-lens/cli run build
-node packages/cli/dist/index.js scan examples/monorepo-sample/src \
-  --report json --allow-violations > reports/arch-lens-report.json
+pnpm build
+pnpm bench
 ```
 
-> Windows PowerShell에서는 `pnpm --filter @arch-lens/cli exec -- arch-lens ...`처럼 바로 실행하면 `arch-lens` 명령을 찾지 못할 수 있으니, 위와 같이 `node dist/index.js` 경로를 직접 실행하거나 `pnpm --filter @arch-lens/cli exec -- node dist/index.js ...` 형태로 실행해주세요.
-
-- 저장소 전체 빌드: `pnpm build`. 특정 패키지 빌드: `pnpm --filter <pkg> run build`.
-
-워크플로 구조는 아래와 같으며, 세부 사항은 [`docs/architecture.md`](./docs/architecture.md)를 참고하세요.
-
-```
-packages/
-  cli/ core/ rules/ plugins/
-examples/
-  monorepo-sample/
-docs/
-```
+측정 방법과 해석은 [`docs/benchmarks.md`](./docs/benchmarks.md)를 참고하세요.
 
 ---
 
+## 검증과 품질 관리
 
+```bash
+pnpm build
+pnpm lint
+pnpm typecheck
+pnpm test
+pnpm coverage
+bash scripts/consumer-smoke.sh
+```
+
+- Vitest unit/integration/CLI E2E 테스트 100개 이상
+- first-party source만 측정하는 coverage threshold 60%
+- 빌드된 실제 CLI를 임시 프로젝트에서 실행하는 E2E fixture
+- Node 20/22 CI matrix
+- tarball pack → clean install → `init`/`scan` consumer smoke test
+- Conventional Commits와 기능 단위 PR 기록
+
+---
+
+## 설계상의 선택과 현재 한계
+
+포트폴리오에서 결과만큼 중요한 것은 트레이드오프를 명확히 드러내는 것이라 생각해 현재 한계도 함께 기록합니다.
+
+- **실행형 플러그인은 신뢰 경계입니다.** npm 플러그인은 일반 Node 코드와 같은 권한으로 실행되므로, 신뢰한 패키지만 사용해야 합니다.
+- **현재 그래프는 파일·정적 import/export 중심입니다.** symbol-level dependency와 모든 dynamic import 패턴을 분석하지는 않습니다.
+- **`--affected`는 영향 범위의 결과를 필터링합니다.** 그래프 구성과 전체 규칙 실행 자체를 완전히 생략하는 true affected execution은 후속 과제입니다.
+- **baseline은 rule + file별 개수 기반입니다.** 라인 이동과 메시지 변경에는 강하지만 개별 위반 identity를 완전히 추적하지는 않습니다.
+- **benchmark는 엔진 in-process 측정입니다.** 실제 CLI 성능에는 Node startup과 config/plugin loading 시간이 추가됩니다.
+
+다음 마일스톤은 첫 npm 베타 게시, 플러그인 실행 timeout/격리, symbol graph 확장, true affected execution입니다.
+
+---
+
+## 문서
+
+| 문서 | 내용 |
+| --- | --- |
+| [`Getting Started`](./docs/getting-started.md) | 설치, 설정, scan/fix, CI 연결 |
+| [`Architecture`](./docs/architecture.md) | orchestrator, graph, ownership, baseline 설계 |
+| [`Rules Reference`](./docs/rules-reference.md) | 내장 규칙과 options |
+| [`Plugin Guide`](./docs/plugin-guide.md) | 실행형 규칙과 플러그인 작성 |
+| [`Benchmarks`](./docs/benchmarks.md) | 성능 측정 방법과 결과 |
+| [`Contributing`](./CONTRIBUTING.md) | 개발 환경, 커밋, PR 가이드 |
+| [`Changelog`](./CHANGELOG.md) | 버전별 변경 사항 |
+
+---
+
+## License
+
+Arch-Lens is released under the [MIT License](./LICENSE).

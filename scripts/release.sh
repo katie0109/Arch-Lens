@@ -17,6 +17,7 @@ if ! command -v pnpm >/dev/null 2>&1; then
 fi
 
 DRY_RUN=${DRY_RUN:-true}
+DIST_TAG=${DIST_TAG:-beta}
 if [[ "${1:-}" == "--publish" ]]; then
   DRY_RUN=false
 fi
@@ -24,13 +25,17 @@ fi
 echo "[release] Installing dependencies"
 pnpm install --frozen-lockfile
 
+echo "[release] Cleaning and building workspaces"
+pnpm clean
+pnpm build
+
 echo "[release] Running lint/typecheck/test (with coverage)"
 pnpm lint
 pnpm typecheck
 pnpm test -- --coverage
 
-echo "[release] Building workspaces"
-pnpm build
+echo "[release] Verifying packed packages in a clean consumer project"
+bash scripts/consumer-smoke.sh
 
 if command -v changeset >/dev/null 2>&1; then
   echo "[release] Changeset status"
@@ -42,19 +47,19 @@ fi
 publish_package() {
   local pkg="$1"
   if [[ "$DRY_RUN" == true ]]; then
-    echo "[release] Dry-run publish for $pkg"
-    pnpm publish --filter "$pkg" --access public --dry-run
+    echo "[release] Dry-run publish for $pkg with dist-tag $DIST_TAG"
+    pnpm publish --filter "$pkg" --access public --tag "$DIST_TAG" --dry-run --no-git-checks
   else
-    echo "[release] Publishing $pkg"
-    pnpm publish --filter "$pkg" --access public
+    echo "[release] Publishing $pkg with dist-tag $DIST_TAG"
+    pnpm publish --filter "$pkg" --access public --tag "$DIST_TAG"
   fi
 }
 
 declare -a WORKSPACES=(
-  "@arch-lens/plugins"
-  "@arch-lens/rules"
-  "@arch-lens/core"
-  "@arch-lens/cli"
+  "arch-lens-rules"
+  "arch-lens-core"
+  "arch-lens-plugin-kit"
+  "arch-lens"
 )
 
 for ws in "${WORKSPACES[@]}"; do
@@ -62,4 +67,4 @@ for ws in "${WORKSPACES[@]}"; do
   echo
 done
 
-echo "[release] Completed. Use '--publish' to run without --dry-run."
+echo "[release] Completed for dist-tag $DIST_TAG. Use '--publish' to run without --dry-run."

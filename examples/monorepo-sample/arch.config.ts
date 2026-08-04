@@ -1,5 +1,5 @@
 // Arch-Lens sample configuration for the example monorepo (ESLint-style rules map).
-import type { ArchLensConfig } from '@arch-lens/core';
+import type { ArchLensConfig } from 'arch-lens-core';
 
 const config: ArchLensConfig = {
   root: __dirname,

@@ -35,7 +35,7 @@ printf 'export const cart = 1;\n' > "$CONSUMER/src/features/Cart/CartService.ts"
   npm init -y >/dev/null
 
   echo "[smoke] installing tarballs"
-  # Installing all tarballs in one command lets the 0.0.0 cross-dependencies resolve to
+  # Installing all tarballs in one command lets workspace cross-dependencies resolve to
   # each other instead of being fetched from the registry.
   npm install --no-audit --no-fund "$TARBALLS"/*.tgz >/dev/null
 

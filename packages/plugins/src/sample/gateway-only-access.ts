@@ -4,7 +4,7 @@ import type {
   GraphNodeId,
   RuleContext,
   RuleViolation,
-} from '@arch-lens/rules';
+} from 'arch-lens-rules';
 
 /**
  * Flagship sample rule.
@@ -164,7 +164,7 @@ export const gatewayOnlyAccessRule = createGatewayOnlyAccessRule();
 
 export const gatewayOnlyAccessPlugin = {
   meta: {
-    name: '@arch-lens/plugin-gateway-only-access',
+    name: 'arch-lens-plugin-gateway-only-access',
     version: '0.0.0',
     description: 'Enforce gateway-only access to restricted areas, with dated waivers.',
   },

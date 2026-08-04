@@ -1,6 +1,6 @@
 import { resolve } from 'node:path';
 
-import type { RuleImportReference } from '@arch-lens/rules';
+import type { RuleImportReference } from 'arch-lens-rules';
 import { describe, expect, it } from 'vitest';
 
 import { buildArchitectureGraph } from '../src/graph/architecture-graph.js';

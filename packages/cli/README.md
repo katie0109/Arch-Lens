@@ -1,10 +1,10 @@
-# @arch-lens/cli
+# arch-lens
 
 Command-line interface for **Arch-Lens** — a whole-graph, executable architecture rule engine
 for TypeScript monorepos.
 
 ```bash
-pnpm add -D @arch-lens/cli @arch-lens/core @arch-lens/rules
+pnpm add -D arch-lens
 arch-lens init            # scaffold arch.config.ts
 arch-lens scan            # check rules
 arch-lens scan --fix      # auto-fix fixable violations

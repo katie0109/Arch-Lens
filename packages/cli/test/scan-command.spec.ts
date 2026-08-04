@@ -11,7 +11,7 @@ const { scanMock, createOrchestratorMock } = vi.hoisted(() => {
   return { scanMock, createOrchestratorMock };
 });
 
-vi.mock('@arch-lens/core', () => ({
+vi.mock('arch-lens-core', () => ({
   createArchLensOrchestrator: createOrchestratorMock,
   loadPluginRules: vi.fn(async () => []),
 }));

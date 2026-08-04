@@ -8,7 +8,7 @@ PLUGIN_PATH="${ROOT_DIR}/plugins/no-default-export.mjs"
 
 if [ ! -f "$CLI_BIN" ]; then
   echo "[Arch-Lens] CLI build output not found. Running pnpm build..."
-  pnpm --filter @arch-lens/cli build >/dev/null
+  pnpm --filter arch-lens build >/dev/null
 fi
 
 if [ ! -f "$PLUGIN_PATH" ]; then

@@ -164,7 +164,7 @@ describe('arch-lens CLI output & exit-code contract (e2e)', () => {
     writeFile(
       dir,
       'arch.config.mjs',
-      `import { loadBuiltInRules } from '@arch-lens/rules';
+      `import { loadBuiltInRules } from 'arch-lens-rules';
 const rfi = loadBuiltInRules({ include: ['${RFI}'] });
 export default {
   include: ['src/**/*.{ts,tsx,js,jsx}'],

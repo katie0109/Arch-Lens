@@ -2,7 +2,7 @@ import { createRequire } from 'node:module';
 import { isAbsolute, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 
-import type { ArchLensRule } from '@arch-lens/rules';
+import type { ArchLensRule } from 'arch-lens-rules';
 
 interface PluginModule<Rule extends ArchLensRule = ArchLensRule> {
   meta: {

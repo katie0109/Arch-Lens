@@ -1,9 +1,9 @@
-# @arch-lens/plugins
+# arch-lens-plugin-kit
 
 Plugin helpers and sample plugins for **Arch-Lens**.
 
 ```ts
-import { definePlugin, createRule } from '@arch-lens/plugins';
+import { definePlugin, createRule } from 'arch-lens-plugin-kit';
 
 export default definePlugin({
   meta: { name: '@your-scope/arch-rules', version: '1.0.0' },

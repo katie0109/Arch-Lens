@@ -1,4 +1,4 @@
-import type { RuleViolation } from '@arch-lens/rules';
+import type { RuleViolation } from 'arch-lens-rules';
 
 /** Minimal SARIF 2.1.0 shape we emit (enough for GitHub Code Scanning ingestion). */
 interface SarifLog {

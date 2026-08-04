@@ -11,12 +11,6 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "skipLibCheck": true,
-    "resolveJsonModule": true,
-    "baseUrl": ".",
-    "paths": {
-      "@arch-lens/plugins": ["packages/plugins/src/index.ts"],
-      "@arch-lens/plugins/*": ["packages/plugins/src/*"],
-      "@arch-lens/*": ["packages/*/src"]
-    }
+    "resolveJsonModule": true
   }
 }

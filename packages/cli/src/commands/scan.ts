@@ -1,8 +1,8 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, resolve } from 'node:path';
 
-import { createArchLensOrchestrator, loadPluginRules } from '@arch-lens/core';
-import type { BaselineData } from '@arch-lens/core';
+import { createArchLensOrchestrator, loadPluginRules } from 'arch-lens-core';
+import type { BaselineData } from 'arch-lens-core';
 import type { CAC } from 'cac';
 import { watch } from 'chokidar';
 

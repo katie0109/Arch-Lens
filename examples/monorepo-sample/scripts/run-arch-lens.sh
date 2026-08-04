@@ -10,12 +10,12 @@ PLUGIN_ENFORCE_SHARED="${REPO_DIR}/packages/plugins/dist/sample/enforce-shared-i
 
 if [ ! -f "$CLI_BIN" ]; then
   echo "[Arch-Lens] CLI build output not found. Running pnpm build..."
-  pnpm --filter @arch-lens/cli build >/dev/null
+  pnpm --filter arch-lens build >/dev/null
 fi
 
 if [ ! -f "$PLUGIN_NO_TODO" ] || [ ! -f "$PLUGIN_ENFORCE_SHARED" ]; then
   echo "[Arch-Lens] Building plugin samples..."
-  pnpm --filter @arch-lens/plugins build >/dev/null
+  pnpm --filter arch-lens-plugin-kit build >/dev/null
 fi
 
 PLUGIN_ARGS=()

@@ -1,4 +1,4 @@
-import type { ArchitectureGraph, GraphNodeId } from '@arch-lens/rules';
+import type { ArchitectureGraph, GraphNodeId } from 'arch-lens-rules';
 
 /**
  * The affected set for an incremental scan: the changed files plus every file that (transitively)
