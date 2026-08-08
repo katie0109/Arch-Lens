@@ -2,8 +2,8 @@ import { stat } from 'node:fs/promises';
 import { dirname, isAbsolute, relative, resolve } from 'node:path';
 import { performance } from 'node:perf_hooks';
 
-import type { ArchLensRule, Ownership, RuleViolation } from 'arch-lens-rules';
-import { loadBuiltInRules } from 'arch-lens-rules';
+import type { ArchLensRule, Ownership, RuleViolation } from '@moth-tools/arch-lens-rules';
+import { loadBuiltInRules } from '@moth-tools/arch-lens-rules';
 
 import { applyBaseline } from '../baseline/baseline.js';
 import { tryLoadArchLensConfig } from '../config/load-config.js';

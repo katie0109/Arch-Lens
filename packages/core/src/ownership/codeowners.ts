@@ -2,7 +2,7 @@ import { constants } from 'node:fs';
 import { access, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-import type { GraphNodeId, Ownership } from 'arch-lens-rules';
+import type { GraphNodeId, Ownership } from '@moth-tools/arch-lens-rules';
 
 interface OwnershipRule {
   pattern: string;

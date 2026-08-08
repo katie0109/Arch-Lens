@@ -1,4 +1,4 @@
-import type { ArchLensRule, RuleSeverity } from 'arch-lens-rules';
+import type { ArchLensRule, RuleSeverity } from '@moth-tools/arch-lens-rules';
 
 import { ConfigValidationError } from '../config/validate-config.js';
 import type { RuleSetting, RulesMap } from '../types.js';

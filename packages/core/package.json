@@ -1,6 +1,6 @@
 {
-  "name": "arch-lens-core",
-  "version": "0.1.0-beta.3",
+  "name": "@moth-tools/arch-lens-core",
+  "version": "0.1.0-beta.4",
   "description": "Core engine for Arch-Lens rule orchestration.",
   "type": "module",
   "main": "dist/index.js",
@@ -30,7 +30,7 @@
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
-    "arch-lens-rules": "workspace:*",
+    "@moth-tools/arch-lens-rules": "workspace:*",
     "fast-glob": "^3.3.2",
     "jiti": "^2.7.0",
     "typescript": "^5.4.0"

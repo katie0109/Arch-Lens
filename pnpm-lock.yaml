@@ -8,6 +8,15 @@ importers:
 
   .:
     devDependencies:
+      '@moth-tools/arch-lens-core':
+        specifier: workspace:*
+        version: link:packages/core
+      '@moth-tools/arch-lens-plugin-kit':
+        specifier: workspace:*
+        version: link:packages/plugins
+      '@moth-tools/arch-lens-rules':
+        specifier: workspace:*
+        version: link:packages/rules
       '@types/node':
         specifier: ^20.11.30
         version: 20.19.25
@@ -20,15 +29,6 @@ importers:
       '@vitest/coverage-v8':
         specifier: ^1.2.2
         version: 1.6.1(vitest@1.6.1)
-      arch-lens-core:
-        specifier: workspace:*
-        version: link:packages/core
-      arch-lens-plugin-kit:
-        specifier: workspace:*
-        version: link:packages/plugins
-      arch-lens-rules:
-        specifier: workspace:*
-        version: link:packages/rules
       eslint:
         specifier: ^8.57.0
         version: 8.57.1
@@ -56,10 +56,10 @@ importers:
 
   packages/cli:
     dependencies:
-      arch-lens-core:
+      '@moth-tools/arch-lens-core':
         specifier: workspace:*
         version: link:../core
-      arch-lens-rules:
+      '@moth-tools/arch-lens-rules':
         specifier: workspace:*
         version: link:../rules
       cac:
@@ -75,7 +75,7 @@ importers:
 
   packages/core:
     dependencies:
-      arch-lens-rules:
+      '@moth-tools/arch-lens-rules':
         specifier: workspace:*
         version: link:../rules
       fast-glob:
@@ -94,7 +94,7 @@ importers:
 
   packages/plugins:
     dependencies:
-      arch-lens-rules:
+      '@moth-tools/arch-lens-rules':
         specifier: workspace:*
         version: link:../rules
     devDependencies:

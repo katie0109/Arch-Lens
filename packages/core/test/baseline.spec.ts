@@ -1,4 +1,4 @@
-import type { RuleViolation } from 'arch-lens-rules';
+import type { RuleViolation } from '@moth-tools/arch-lens-rules';
 import { describe, expect, it } from 'vitest';
 
 import { applyBaseline, computeBaseline, isBaselineData } from '../src/baseline/baseline.js';

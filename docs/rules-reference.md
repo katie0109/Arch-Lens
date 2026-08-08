@@ -9,14 +9,14 @@ Arch-Lens는 **Structure**와 **Dependency** 두 축으로 내장 규칙을 제�
 1. **필요한 규칙만 맵에 추가**: `rules` 맵에 넣은 id만 활성화되고, 넣지 않으면 비활성입니다. 잠깐 끄려면 `'id': 'off'`.
 2. **심각도로 강도 조절**: CI를 실패시킬 규칙은 `'error'`, 안내만 할 규칙은 `'warn'`으로 둡니다(warning은 exit 0).
 3. **옵션으로 팀에 맞추기**: 파일 경로·레이어 구성은 팀마다 다르므로 `['error', options]` 튜플로 각 규칙 동작을 조정합니다.
-4. **플러그인 추가**: 내장 규칙으로 부족한 정책은 `arch-lens-plugin-kit`으로 직접 작성해 `plugins`+`rules`로 활성화합니다.
+4. **플러그인 추가**: 내장 규칙으로 부족한 정책은 `@moth-tools/arch-lens-plugin-kit`으로 직접 작성해 `plugins`+`rules`로 활성화합니다.
 
 ---
 
 ## 💡 사용 방법 요약
 
 ```ts
-import type { ArchLensConfig } from 'arch-lens-cli';
+import type { ArchLensConfig } from '@moth-tools/arch-lens';
 
 const config: ArchLensConfig = {
   include: ['src/**/*.{ts,tsx}'],
@@ -150,7 +150,7 @@ export interface RuleViolation {
 
 ## 🔌 플러그인과의 연동
 
-- 플러그인은 `arch-lens-plugin-kit`의 `definePlugin()`으로 규칙 묶음을 export하고, config의 `plugins` 배열(또는 CLI `--plugin`)에 등록합니다. bare 패키지 지정자(`@scope/rules`)도 지원합니다.
+- 플러그인은 `@moth-tools/arch-lens-plugin-kit`의 `definePlugin()`으로 규칙 묶음을 export하고, config의 `plugins` 배열(또는 CLI `--plugin`)에 등록합니다. bare 패키지 지정자(`@scope/rules`)도 지원합니다.
 - 등록된 플러그인의 규칙은 내장 규칙과 동일하게 `rules` 맵에서 **id로 활성화**합니다.
 
 ```ts

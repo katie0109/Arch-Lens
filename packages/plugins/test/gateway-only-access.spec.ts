@@ -1,4 +1,4 @@
-import type { ArchitectureGraph, GraphNodeId, RuleContext } from 'arch-lens-rules';
+import type { ArchitectureGraph, GraphNodeId, RuleContext } from '@moth-tools/arch-lens-rules';
 import { describe, expect, it } from 'vitest';
 
 import {

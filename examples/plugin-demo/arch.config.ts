@@ -1,4 +1,4 @@
-import type { ArchLensConfig } from 'arch-lens-core';
+import type { ArchLensConfig } from '@moth-tools/arch-lens-core';
 
 // The plugin is declared in the config's `plugins` array (resolved from this directory),
 // and its rule is activated by id in the map — no --plugin flag needed.

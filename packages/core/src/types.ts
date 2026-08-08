@@ -1,4 +1,4 @@
-import type { ArchLensRule, RuleViolation } from 'arch-lens-rules';
+import type { ArchLensRule, RuleViolation } from '@moth-tools/arch-lens-rules';
 
 import type { BaselineData } from './baseline/baseline.js';
 import type { ReportFormat } from './reporter/console-reporter.js';

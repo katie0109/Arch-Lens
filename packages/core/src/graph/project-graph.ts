@@ -1,4 +1,4 @@
-import type { ArchitectureGraph, GraphNodeId } from 'arch-lens-rules';
+import type { ArchitectureGraph, GraphNodeId } from '@moth-tools/arch-lens-rules';
 
 import type { ProjectDefinition } from '../types.js';
 

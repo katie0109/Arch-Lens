@@ -25,18 +25,18 @@ if [[ "${1:-}" == "--publish" ]]; then
 fi
 
 declare -a WORKSPACES=(
-  "arch-lens-rules"
-  "arch-lens-core"
-  "arch-lens-plugin-kit"
-  "arch-lens-cli"
+  "@moth-tools/arch-lens-rules"
+  "@moth-tools/arch-lens-core"
+  "@moth-tools/arch-lens-plugin-kit"
+  "@moth-tools/arch-lens"
 )
 
 package_directory() {
   case "$1" in
-    arch-lens-rules) echo "packages/rules" ;;
-    arch-lens-core) echo "packages/core" ;;
-    arch-lens-plugin-kit) echo "packages/plugins" ;;
-    arch-lens-cli) echo "packages/cli" ;;
+    @moth-tools/arch-lens-rules) echo "packages/rules" ;;
+    @moth-tools/arch-lens-core) echo "packages/core" ;;
+    @moth-tools/arch-lens-plugin-kit) echo "packages/plugins" ;;
+    @moth-tools/arch-lens) echo "packages/cli" ;;
     *)
       echo "[release] Unknown workspace package: $1" >&2
       return 1
@@ -178,9 +178,10 @@ normalize_dist_tags() {
 
   if [[ "$version" == *-* && "$DIST_TAG" != "latest" ]]; then
     latest_version=$(registry_dist_tag "$pkg" latest) || true
-    if [[ -n "$latest_version" ]]; then
-      echo "[release] Removing unintended latest tag from $pkg (was $latest_version)"
-      npm dist-tag rm "$pkg" latest
+    if [[ "$latest_version" == "$version" ]]; then
+      echo "[release] Warning: npm assigned latest to first prerelease $pkg@$version; consumers must install @$DIST_TAG explicitly." >&2
+    elif [[ -n "$latest_version" ]]; then
+      echo "[release] Preserving existing latest tag for $pkg at $latest_version."
     fi
   fi
 }
@@ -189,20 +190,11 @@ verify_dist_tags() {
   local pkg="$1"
   local version="$2"
   local tagged_version=""
-  local latest_version=""
 
   tagged_version=$(registry_dist_tag "$pkg" "$DIST_TAG") || true
   if [[ "$tagged_version" != "$version" ]]; then
     echo "[release] Verification failed: $pkg dist-tag $DIST_TAG is '${tagged_version:-missing}', expected $version." >&2
     return 1
-  fi
-
-  if [[ "$version" == *-* && "$DIST_TAG" != "latest" ]]; then
-    latest_version=$(registry_dist_tag "$pkg" latest) || true
-    if [[ -n "$latest_version" ]]; then
-      echo "[release] Verification failed: prerelease $pkg still has latest -> $latest_version." >&2
-      return 1
-    fi
   fi
 }
 

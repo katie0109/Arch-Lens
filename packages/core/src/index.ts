@@ -12,7 +12,7 @@ export { buildDependencyGraph, createDefaultResolver } from './parser/ts-depende
 export { buildArchitectureGraph } from './graph/architecture-graph.js';
 export { buildProjectGraph } from './graph/project-graph.js';
 export { createGraph } from './graph/create-graph.js';
-export type { ArchitectureGraph, GraphNodeId, GraphEdge } from 'arch-lens-rules';
+export type { ArchitectureGraph, GraphNodeId, GraphEdge } from '@moth-tools/arch-lens-rules';
 export type { ProjectDefinition } from './types.js';
 export { loadPluginRules, resolvePluginUrl } from './plugins/load-plugins.js';
 export { computeBaseline, applyBaseline, isBaselineData } from './baseline/baseline.js';
@@ -23,7 +23,7 @@ export {
   parseCodeowners,
   codeownersToRegExp,
 } from './ownership/codeowners.js';
-export type { Ownership } from 'arch-lens-rules';
+export type { Ownership } from '@moth-tools/arch-lens-rules';
 export { computeAffected } from './incremental/affected.js';
 export { reportViolations } from './reporter/console-reporter.js';
 export type { ArchLensConfig } from './types.js';

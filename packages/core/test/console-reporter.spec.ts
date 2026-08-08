@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import type { RuleViolation } from 'arch-lens-rules';
+import type { RuleViolation } from '@moth-tools/arch-lens-rules';
 
 import { reportViolations } from '../src/reporter/console-reporter.js';
 

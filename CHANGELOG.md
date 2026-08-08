@@ -4,20 +4,35 @@ All notable changes to Arch-Lens are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims to follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-beta.4] - 2026-08-08
+
+First complete branded npm beta under the `@moth-tools` organization. The package scope prevents
+future similarity collisions while keeping the executable name `arch-lens`.
+
+### Changed
+
+- Migrated all public package names and internal dependencies to `@moth-tools/arch-lens`,
+  `@moth-tools/arch-lens-core`, `@moth-tools/arch-lens-rules`, and
+  `@moth-tools/arch-lens-plugin-kit`.
+- Updated documentation, examples, generated configuration, tests, CI, and release filters for
+  the organization scope.
+- Adjusted prerelease dist-tag validation to require `beta` without attempting to delete npm's
+  automatically retained `latest` tag. npm may assign `latest` on a package's first publication,
+  so prerelease installation remains explicitly documented with `@beta`.
+
 ## [0.1.0-beta.3] - 2026-08-08
 
-Recovery release that completes the first public npm beta. npm rejected the original CLI package
-name because it was too similar to an existing package, so the installable CLI package is now
-`arch-lens-cli` while its executable remains `arch-lens`.
+Second partial npm publication. The three support packages were published, but npm rejected the
+planned `arch-lens-cli` name at publish time because it was too similar to `archlens-cli`. No CLI
+package was published at this version.
 
 ### Changed
 
 - Renamed the CLI npm package from `arch-lens` to `arch-lens-cli` across workspace filters,
   generated configuration, documentation, examples, and CI.
-- Aligned all four public packages at `0.1.0-beta.3` so consumers can install a complete,
-  consistent prerelease after the partial beta.2 publication.
-- Hardened the release helper to normalize and verify npm dist-tags after publication. Prerelease
-  packages retain `beta` and must not expose an unintended `latest` tag.
+- Published beta.3 of `arch-lens-rules`, `arch-lens-core`, and `arch-lens-plugin-kit`.
+- Added post-publication dist-tag checks; npm accepted the `beta` updates but rejected deletion of
+  the automatically retained `latest` tag.
 
 ## [0.1.0-beta.2] - 2026-08-04
 

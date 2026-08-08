@@ -1,4 +1,4 @@
-# arch-lens-rules
+# @moth-tools/arch-lens-rules
 
 Built-in rules and the **rule authoring contract** for Arch-Lens.
 
@@ -7,7 +7,7 @@ This package owns the core types plugin and rule authors program against: `ArchL
 `ArchitectureGraph`, and `Ownership`.
 
 ```ts
-import { loadBuiltInRules, type ArchLensRule } from 'arch-lens-rules';
+import { loadBuiltInRules, type ArchLensRule } from '@moth-tools/arch-lens-rules';
 
 const rules = loadBuiltInRules(); // the default built-in rule set
 ```
