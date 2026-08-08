@@ -16,6 +16,8 @@ Release preparation for the first official npm packages: `arch-lens`, `arch-lens
 - Added the npm `beta` dist-tag to package metadata and the release helper so prereleases do not
   become `latest`.
 - Ordered publication by dependency: rules → core → plugin kit → CLI.
+- Added main-branch, clean-tree, release-tag, npm-authentication, and registry-source preflight
+  checks. Re-running a partial release now skips versions already published from this repository.
 - Updated package docs, examples, generated config, and consumer smoke tests for the new names.
 
 ## [0.1.0-beta.1] - 2026-07-29

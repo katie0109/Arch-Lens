@@ -18,8 +18,135 @@ fi
 
 DRY_RUN=${DRY_RUN:-true}
 DIST_TAG=${DIST_TAG:-beta}
+EXPECTED_REPOSITORY="github.com/katie0109/Arch-Lens"
+NPM_USER=""
 if [[ "${1:-}" == "--publish" ]]; then
   DRY_RUN=false
+fi
+
+declare -a WORKSPACES=(
+  "arch-lens-rules"
+  "arch-lens-core"
+  "arch-lens-plugin-kit"
+  "arch-lens"
+)
+
+package_directory() {
+  case "$1" in
+    arch-lens-rules) echo "packages/rules" ;;
+    arch-lens-core) echo "packages/core" ;;
+    arch-lens-plugin-kit) echo "packages/plugins" ;;
+    arch-lens) echo "packages/cli" ;;
+    *)
+      echo "[release] Unknown workspace package: $1" >&2
+      return 1
+      ;;
+  esac
+}
+
+package_version() {
+  local dir
+  dir=$(package_directory "$1")
+  node -p "require('./${dir}/package.json').version"
+}
+
+RELEASE_VERSION=$(node -p "require('./package.json').version")
+
+validate_release_metadata() {
+  local pkg
+  local version
+
+  if [[ "$RELEASE_VERSION" == *-* && "$DIST_TAG" == "latest" ]]; then
+    echo "[release] Refusing to publish prerelease $RELEASE_VERSION with the latest tag." >&2
+    exit 1
+  fi
+
+  for pkg in "${WORKSPACES[@]}"; do
+    version=$(package_version "$pkg")
+    if [[ "$version" != "$RELEASE_VERSION" ]]; then
+      echo "[release] Version mismatch: $pkg is $version, root is $RELEASE_VERSION." >&2
+      exit 1
+    fi
+  done
+}
+
+preflight_real_publish() {
+  local branch
+  local lookup_status
+  local pkg
+  local release_tag="v${RELEASE_VERSION}"
+
+  branch=$(git branch --show-current)
+  if [[ "$branch" != "main" && "$branch" != "master" ]]; then
+    echo "[release] Real publishing is allowed only from main/master (current: $branch)." >&2
+    exit 1
+  fi
+
+  if [[ -n "$(git status --porcelain)" ]]; then
+    echo "[release] Real publishing requires a clean working tree." >&2
+    exit 1
+  fi
+
+  if [[ "$(git tag --points-at HEAD --list "$release_tag")" != "$release_tag" ]]; then
+    echo "[release] Tag $release_tag must point at HEAD before publishing." >&2
+    exit 1
+  fi
+
+  if ! NPM_USER=$(npm whoami 2>/dev/null); then
+    echo "[release] npm authentication is required. Run 'npm login' first." >&2
+    exit 1
+  fi
+
+  for pkg in "${WORKSPACES[@]}"; do
+    if package_is_already_published "$pkg" "$(package_version "$pkg")"; then
+      echo "[release] Preflight: $pkg@$RELEASE_VERSION is already published and can be resumed."
+    else
+      lookup_status=$?
+      if [[ $lookup_status -eq 1 ]]; then
+        echo "[release] Preflight: $pkg@$RELEASE_VERSION is available for publishing."
+      else
+        exit "$lookup_status"
+      fi
+    fi
+  done
+}
+
+package_is_already_published() {
+  local pkg="$1"
+  local version="$2"
+  local spec="${pkg}@${version}"
+  local output
+  local status
+
+  set +e
+  output=$(npm view "$spec" version repository.url maintainers.name --json 2>&1)
+  status=$?
+  set -e
+
+  if [[ $status -eq 0 ]]; then
+    if [[ "$output" != *"$EXPECTED_REPOSITORY"* ]]; then
+      echo "[release] Refusing to reuse $spec: registry metadata points to another repository." >&2
+      return 2
+    fi
+    if [[ -n "$NPM_USER" && "$output" != *"$NPM_USER"* ]]; then
+      echo "[release] Refusing to reuse $spec: npm user $NPM_USER is not a maintainer." >&2
+      return 2
+    fi
+    return 0
+  fi
+
+  if [[ "$output" == *"E404"* ]]; then
+    return 1
+  fi
+
+  echo "[release] Could not query $spec from npm:" >&2
+  echo "$output" >&2
+  return 2
+}
+
+validate_release_metadata
+if [[ "$DRY_RUN" == false ]]; then
+  preflight_real_publish
 fi
 
 echo "[release] Installing dependencies"
@@ -46,25 +173,41 @@ fi
 
 publish_package() {
   local pkg="$1"
+  local version
+  local lookup_status
+
+  version=$(package_version "$pkg")
   if [[ "$DRY_RUN" == true ]]; then
     echo "[release] Dry-run publish for $pkg with dist-tag $DIST_TAG"
     pnpm publish --filter "$pkg" --access public --tag "$DIST_TAG" --dry-run --no-git-checks
   else
+    if package_is_already_published "$pkg" "$version"; then
+      echo "[release] Skipping $pkg@$version; it is already published from this repository."
+      return 0
+    else
+      lookup_status=$?
+      if [[ $lookup_status -ne 1 ]]; then
+        return "$lookup_status"
+      fi
+    fi
+
     echo "[release] Publishing $pkg with dist-tag $DIST_TAG"
     pnpm publish --filter "$pkg" --access public --tag "$DIST_TAG"
   fi
 }
 
-declare -a WORKSPACES=(
-  "arch-lens-rules"
-  "arch-lens-core"
-  "arch-lens-plugin-kit"
-  "arch-lens"
-)
-
 for ws in "${WORKSPACES[@]}"; do
   publish_package "$ws"
   echo
 done
+
+if [[ "$DRY_RUN" == false ]]; then
+  for ws in "${WORKSPACES[@]}"; do
+    if ! package_is_already_published "$ws" "$(package_version "$ws")"; then
+      echo "[release] Verification failed: $ws was not confirmed in the npm registry." >&2
+      exit 1
+    fi
+  done
+fi
 
 echo "[release] Completed for dist-tag $DIST_TAG. Use '--publish' to run without --dry-run."

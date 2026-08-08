@@ -4,10 +4,10 @@ Command-line interface for **Arch-Lens** — a whole-graph, executable architect
 for TypeScript monorepos.
 
 ```bash
-pnpm add -D arch-lens
-arch-lens init            # scaffold arch.config.ts
-arch-lens scan            # check rules
-arch-lens scan --fix      # auto-fix fixable violations
+npm install --save-dev arch-lens@beta
+npx arch-lens init            # scaffold arch.config.ts
+npx arch-lens scan            # check rules
+npx arch-lens scan --fix      # auto-fix fixable violations
 ```
 
 ## Highlights
