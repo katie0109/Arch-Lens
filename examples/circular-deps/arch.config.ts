@@ -1,4 +1,4 @@
-import type { ArchLensConfig } from 'arch-lens-core';
+import type { ArchLensConfig } from '@moth-tools/arch-lens-core';
 
 const config: ArchLensConfig = {
   root: __dirname,

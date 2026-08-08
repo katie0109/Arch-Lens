@@ -1,10 +1,10 @@
-# arch-lens-cli
+# @moth-tools/arch-lens
 
 Command-line interface for **Arch-Lens** — a whole-graph, executable architecture rule engine
 for TypeScript monorepos.
 
 ```bash
-npm install --save-dev arch-lens-cli@beta
+npm install --save-dev @moth-tools/arch-lens@beta
 npx arch-lens init            # scaffold arch.config.ts
 npx arch-lens scan            # check rules
 npx arch-lens scan --fix      # auto-fix fixable violations

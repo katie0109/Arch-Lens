@@ -1,4 +1,4 @@
-import type { ArchitectureGraph, GraphEdge, GraphNodeId } from 'arch-lens-rules';
+import type { ArchitectureGraph, GraphEdge, GraphNodeId } from '@moth-tools/arch-lens-rules';
 
 /**
  * Builds an {@link ArchitectureGraph} over pre-computed adjacency maps. Shared by the file graph

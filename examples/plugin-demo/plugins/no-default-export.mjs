@@ -1,7 +1,7 @@
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 
-import { definePlugin, createRule } from 'arch-lens-plugin-kit';
+import { definePlugin, createRule } from '@moth-tools/arch-lens-plugin-kit';
 
 function isSupported(file) {
   return /\.(?:[cm]?ts|[jt]sx?)$/i.test(file);

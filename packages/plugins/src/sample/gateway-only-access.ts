@@ -4,7 +4,7 @@ import type {
   GraphNodeId,
   RuleContext,
   RuleViolation,
-} from 'arch-lens-rules';
+} from '@moth-tools/arch-lens-rules';
 
 /**
  * Flagship sample rule.

@@ -1,6 +1,6 @@
 import { writeFile } from 'node:fs/promises';
 
-import { computeBaseline, createArchLensOrchestrator, loadPluginRules } from 'arch-lens-core';
+import { computeBaseline, createArchLensOrchestrator, loadPluginRules } from '@moth-tools/arch-lens-core';
 import type { CAC } from 'cac';
 
 import { DEFAULT_BASELINE_FILE, resolveBaselinePath } from '../utils/baseline-io.js';

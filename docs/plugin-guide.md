@@ -10,7 +10,7 @@ Arch-Lens는 내장 규칙 외에도, 팀 고유의 컨벤션을 플러그인으
 | --- | --- |
 | `createRule(rule)` | 타입 안전한 `PluginRule`을 생성합니다. 규칙 ID/메타/체크 로직을 작성하세요. |
 | `definePlugin({ meta, rules })` | 여러 규칙을 하나의 플러그인으로 묶습니다. `meta`에는 이름/버전을 기입합니다. |
-| `RuleContext`(`arch-lens-rules`) | `root`, `files`, `fix`, `verbose`, **`graph`**, **`projectGraph`**, **`owners`**, **`options`**, `report()`에 접근하는 컨텍스트. 그래프 질의·소유권·프로젝트 경계·규칙 옵션을 사용할 수 있습니다. |
+| `RuleContext`(`@moth-tools/arch-lens-rules`) | `root`, `files`, `fix`, `verbose`, **`graph`**, **`projectGraph`**, **`owners`**, **`options`**, `report()`에 접근하는 컨텍스트. 그래프 질의·소유권·프로젝트 경계·규칙 옵션을 사용할 수 있습니다. |
 | `RuleViolation` | `ruleId`, `message`, `severity`, `file`, `line`, `column`, `suggestedFix` 등을 담아 Reporter로 전달 |
 
 SDK 소스는 [`packages/plugins/src`](../packages/plugins/src)에서 확인할 수 있습니다.
@@ -25,13 +25,13 @@ SDK 소스는 [`packages/plugins/src`](../packages/plugins/src)에서 확인할 
 mkdir -p plugins/my-team
 cd plugins/my-team
 pnpm init -y
-pnpm add arch-lens-plugin-kit
+pnpm add @moth-tools/arch-lens-plugin-kit
 ```
 
 ### 2-2. 규칙 작성 (`plugins/my-team/src/no-legacy-imports.ts`)
 
 ```ts
-import { createRule } from 'arch-lens-plugin-kit';
+import { createRule } from '@moth-tools/arch-lens-plugin-kit';
 
 export const noLegacyImportsRule = createRule({
   id: 'lint/no-legacy-imports',
@@ -70,7 +70,7 @@ export const noLegacyImportsRule = createRule({
 ### 2-3. 플러그인 묶기 (`plugins/my-team/src/index.ts`)
 
 ```ts
-import { definePlugin } from 'arch-lens-plugin-kit';
+import { definePlugin } from '@moth-tools/arch-lens-plugin-kit';
 import { noLegacyImportsRule } from './no-legacy-imports';
 
 export default definePlugin({
@@ -105,7 +105,7 @@ arch-lens scan src \
 `plugins` 배열로 선언하고, 규칙은 `rules` 맵에서 **id로 활성화**합니다. 심각도(`off`/`warn`/`error`)와 옵션도 여기서 지정합니다.
 
 ```ts
-import type { ArchLensConfig } from 'arch-lens-cli';
+import type { ArchLensConfig } from '@moth-tools/arch-lens';
 
 const config: ArchLensConfig = {
   plugins: ['@your-scope/arch-rules'],

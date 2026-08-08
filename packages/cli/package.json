@@ -1,6 +1,6 @@
 {
-  "name": "arch-lens-cli",
-  "version": "0.1.0-beta.3",
+  "name": "@moth-tools/arch-lens",
+  "version": "0.1.0-beta.4",
   "description": "Command line interface for Arch-Lens.",
   "type": "module",
   "bin": {
@@ -33,8 +33,8 @@
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
-    "arch-lens-core": "workspace:*",
-    "arch-lens-rules": "workspace:*",
+    "@moth-tools/arch-lens-core": "workspace:*",
+    "@moth-tools/arch-lens-rules": "workspace:*",
     "cac": "^6.7.14",
     "chokidar": "^3.6.0"
   },

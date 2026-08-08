@@ -52,7 +52,7 @@ jobs:
       - name: Architecture scan
         run: |
           mkdir -p reports
-          pnpm --filter arch-lens-cli exec -- node dist/index.js scan examples/monorepo-sample/src --report json --allow-violations > reports/arch-lens-report.json
+          pnpm --filter @moth-tools/arch-lens exec -- node dist/index.js scan examples/monorepo-sample/src --report json --allow-violations > reports/arch-lens-report.json
 
       - name: Upload coverage artifact
         if: matrix.node == 20

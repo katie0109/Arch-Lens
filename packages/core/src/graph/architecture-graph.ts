@@ -1,6 +1,6 @@
 import { relative } from 'node:path';
 
-import type { ArchitectureGraph, GraphNodeId } from 'arch-lens-rules';
+import type { ArchitectureGraph, GraphNodeId } from '@moth-tools/arch-lens-rules';
 
 import type { DependencyGraph } from '../parser/ts-dependency-graph.js';
 

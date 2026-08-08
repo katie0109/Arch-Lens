@@ -23,7 +23,7 @@ $ echo $?
 ```
 
 > [!IMPORTANT]
-> 공식 npm CLI 패키지 이름은 `arch-lens-cli`이고 실행 명령은 `arch-lens`입니다. npm의 `arch-lens`, `@arch-lens/cli`, `@arch-lens/core`는 이 프로젝트와 관계없는 패키지이므로 설치하지 마세요.
+> 공식 npm CLI 패키지는 `@moth-tools/arch-lens`이고 실행 명령은 `arch-lens`입니다. npm의 `arch-lens`, `arch-lens-cli`, `@arch-lens/cli`, `@arch-lens/core`는 이 프로젝트와 관계없는 패키지이므로 설치하지 마세요.
 
 ---
 
@@ -141,7 +141,7 @@ interface ArchitectureGraph {
 규칙별로 `off`, `warn`, `error`와 options를 지정합니다. warning만 있으면 CI는 통과하고 error가 하나라도 있으면 종료 코드 1을 반환합니다.
 
 ```ts
-import type { ArchLensConfig } from 'arch-lens-cli';
+import type { ArchLensConfig } from '@moth-tools/arch-lens';
 
 const config: ArchLensConfig = {
   include: ['src/**/*.{ts,tsx}'],
@@ -191,10 +191,10 @@ arch-lens scan --report sarif > arch-lens.sarif
 
 | 패키지 | 역할 |
 | --- | --- |
-| `arch-lens-cli` | `init`, `scan`, `baseline`, watch와 CLI lifecycle |
-| `arch-lens-core` | config, file scan, dependency graph, orchestrator, reporter |
-| `arch-lens-rules` | 공통 Rule/Graph 타입과 내장 규칙 8종 |
-| `arch-lens-plugin-kit` | `createRule`, `definePlugin`, 실행형 규칙 예제 |
+| `@moth-tools/arch-lens` | `init`, `scan`, `baseline`, watch와 CLI lifecycle |
+| `@moth-tools/arch-lens-core` | config, file scan, dependency graph, orchestrator, reporter |
+| `@moth-tools/arch-lens-rules` | 공통 Rule/Graph 타입과 내장 규칙 8종 |
+| `@moth-tools/arch-lens-plugin-kit` | `createRule`, `definePlugin`, 실행형 규칙 예제 |
 
 ```text
 packages/
@@ -219,7 +219,7 @@ examples/
 npm 베타 패키지를 개발 의존성으로 설치합니다. 패키지 이름과 실행 명령이 다른 점에 유의하세요.
 
 ```bash
-pnpm add -D arch-lens-cli@beta
+pnpm add -D @moth-tools/arch-lens@beta
 pnpm exec arch-lens init --config arch.config.ts
 pnpm exec arch-lens scan
 ```
@@ -242,10 +242,10 @@ node packages/cli/dist/index.js scan examples/monorepo-sample/src \
 설정 파일 생성과 기본 워크플로:
 
 ```bash
-pnpm --filter arch-lens-cli exec arch-lens init --config arch.config.ts
-pnpm --filter arch-lens-cli exec arch-lens scan
-pnpm --filter arch-lens-cli exec arch-lens scan --fix
-pnpm --filter arch-lens-cli exec arch-lens scan --watch
+pnpm --filter @moth-tools/arch-lens exec arch-lens init --config arch.config.ts
+pnpm --filter @moth-tools/arch-lens exec arch-lens scan
+pnpm --filter @moth-tools/arch-lens exec arch-lens scan --fix
+pnpm --filter @moth-tools/arch-lens exec arch-lens scan --watch
 ```
 
 대표 예제를 한 번에 실행할 수도 있습니다.

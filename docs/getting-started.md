@@ -7,7 +7,7 @@ Arch-Lens는 **설정 파일 하나**로 팀의 구조/의존성 규칙을 검�
 ## 1. 설치
 
 ```bash
-pnpm add -D arch-lens-cli@beta
+pnpm add -D @moth-tools/arch-lens@beta
 # npm 또는 yarn 환경이라면 동일 패키지를 devDependencies에 추가하세요.
 ```
 
@@ -53,7 +53,7 @@ pnpm exec arch-lens scan --watch
 `arch.config.ts`의 `rules` 맵에서 규칙 id별로 심각도(`off`/`warn`/`error`)와 옵션(`[severity, options]`)을 지정합니다. `plugins` 배열로 npm/로컬 플러그인을 선언하면 그 규칙도 id로 활성화됩니다.
 
 ```ts
-import type { ArchLensConfig } from 'arch-lens-cli';
+import type { ArchLensConfig } from '@moth-tools/arch-lens';
 
 const config: ArchLensConfig = {
   plugins: ['@your-scope/arch-rules'],

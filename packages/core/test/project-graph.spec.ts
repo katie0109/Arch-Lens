@@ -1,4 +1,4 @@
-import type { ArchitectureGraph } from 'arch-lens-rules';
+import type { ArchitectureGraph } from '@moth-tools/arch-lens-rules';
 import { describe, expect, it } from 'vitest';
 
 import { buildProjectGraph } from '../src/graph/project-graph.js';

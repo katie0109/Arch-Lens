@@ -1,4 +1,4 @@
-import type { RuleViolation } from 'arch-lens-rules';
+import type { RuleViolation } from '@moth-tools/arch-lens-rules';
 
 import { buildSarif } from './sarif.js';
 

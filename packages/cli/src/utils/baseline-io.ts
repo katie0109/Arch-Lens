@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 
-import { isBaselineData } from 'arch-lens-core';
-import type { BaselineData } from 'arch-lens-core';
+import { isBaselineData } from '@moth-tools/arch-lens-core';
+import type { BaselineData } from '@moth-tools/arch-lens-core';
 
 export const DEFAULT_BASELINE_FILE = 'arch-lens-baseline.json';
 

@@ -1,4 +1,4 @@
-import type { ArchLensConfig } from 'arch-lens-core';
+import type { ArchLensConfig } from '@moth-tools/arch-lens-core';
 
 // The flagship plugin is declared in `plugins` (path relative to this file) and activated
 // by id in the rules map, with options (restricted/gateways) and a dated waiver.
