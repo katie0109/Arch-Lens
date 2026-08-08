@@ -7,7 +7,7 @@ Arch-Lens는 **설정 파일 하나**로 팀의 구조/의존성 규칙을 검�
 ## 1. 설치
 
 ```bash
-pnpm add -D arch-lens@beta
+pnpm add -D arch-lens-cli@beta
 # npm 또는 yarn 환경이라면 동일 패키지를 devDependencies에 추가하세요.
 ```
 
@@ -53,7 +53,7 @@ pnpm exec arch-lens scan --watch
 `arch.config.ts`의 `rules` 맵에서 규칙 id별로 심각도(`off`/`warn`/`error`)와 옵션(`[severity, options]`)을 지정합니다. `plugins` 배열로 npm/로컬 플러그인을 선언하면 그 규칙도 id로 활성화됩니다.
 
 ```ts
-import type { ArchLensConfig } from 'arch-lens';
+import type { ArchLensConfig } from 'arch-lens-cli';
 
 const config: ArchLensConfig = {
   plugins: ['@your-scope/arch-rules'],
@@ -91,16 +91,16 @@ export default config;
 
 ```yaml
 - name: Architecture guard
-  run: npx arch-lens scan                        # error 위반이 있으면 실패(exit 1)
+  run: pnpm exec arch-lens scan                  # error 위반이 있으면 실패(exit 1)
 
 # 기존 코드베이스에 점진 도입: 신규 위반만 실패
-- run: npx arch-lens scan --baseline
+- run: pnpm exec arch-lens scan --baseline
 
 # PR에서 변경분만 검사 (변경 파일 + 전이 dependents)
-- run: npx arch-lens scan --affected --since origin/main
+- run: pnpm exec arch-lens scan --affected --since origin/main
 
 # GitHub Code Scanning 업로드
-- run: npx arch-lens scan --report sarif --allow-violations > arch-lens.sarif
+- run: pnpm exec arch-lens scan --report sarif --allow-violations > arch-lens.sarif
 - uses: github/codeql-action/upload-sarif@v3
   with:
     sarif_file: arch-lens.sarif

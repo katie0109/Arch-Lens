@@ -1,6 +1,6 @@
 {
   "name": "arch-lens-core",
-  "version": "0.1.0-beta.2",
+  "version": "0.1.0-beta.3",
   "description": "Core engine for Arch-Lens rule orchestration.",
   "type": "module",
   "main": "dist/index.js",

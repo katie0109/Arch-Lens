@@ -4,11 +4,26 @@ All notable changes to Arch-Lens are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims to follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.0-beta.3] - 2026-08-08
+
+Recovery release that completes the first public npm beta. npm rejected the original CLI package
+name because it was too similar to an existing package, so the installable CLI package is now
+`arch-lens-cli` while its executable remains `arch-lens`.
+
+### Changed
+
+- Renamed the CLI npm package from `arch-lens` to `arch-lens-cli` across workspace filters,
+  generated configuration, documentation, examples, and CI.
+- Aligned all four public packages at `0.1.0-beta.3` so consumers can install a complete,
+  consistent prerelease after the partial beta.2 publication.
+- Hardened the release helper to normalize and verify npm dist-tags after publication. Prerelease
+  packages retain `beta` and must not expose an unintended `latest` tag.
+
 ## [0.1.0-beta.2] - 2026-08-04
 
-Release preparation for the first official npm packages: `arch-lens`, `arch-lens-core`,
-`arch-lens-rules`, and `arch-lens-plugin-kit`. These names replace the unavailable
-`@arch-lens/*` namespace; no package in that namespace was published by this project.
+Partial first npm publication. `arch-lens-rules`, `arch-lens-core`, and `arch-lens-plugin-kit`
+were published, but npm rejected the planned `arch-lens` CLI name because it was too similar to an
+existing package. No CLI package was published at this version.
 
 ### Changed
 

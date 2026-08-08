@@ -1,6 +1,6 @@
 {
-  "name": "arch-lens",
-  "version": "0.1.0-beta.2",
+  "name": "arch-lens-cli",
+  "version": "0.1.0-beta.3",
   "description": "Command line interface for Arch-Lens.",
   "type": "module",
   "bin": {

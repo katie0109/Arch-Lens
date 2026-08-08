@@ -7,7 +7,7 @@ CONFIG_PATH="${ROOT_DIR}/arch.config.ts"
 
 if [ ! -f "$CLI_BIN" ]; then
   echo "[Arch-Lens] CLI build output not found. Running pnpm build..."
-  pnpm --filter arch-lens build >/dev/null
+  pnpm --filter arch-lens-cli build >/dev/null
 fi
 
 echo "[Arch-Lens] Running circular dependency demo"

@@ -16,7 +16,7 @@ Arch-Lens는 **Structure**와 **Dependency** 두 축으로 내장 규칙을 제�
 ## 💡 사용 방법 요약
 
 ```ts
-import type { ArchLensConfig } from 'arch-lens';
+import type { ArchLensConfig } from 'arch-lens-cli';
 
 const config: ArchLensConfig = {
   include: ['src/**/*.{ts,tsx}'],

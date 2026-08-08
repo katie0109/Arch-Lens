@@ -3,7 +3,7 @@
 Core engine for **Arch-Lens**: config loading, rule resolution, the scan orchestrator, the
 dependency/architecture graph, project graph, CODEOWNERS ownership, baseline, and reporters.
 
-Most users interact with Arch-Lens through [`arch-lens`](https://www.npmjs.com/package/arch-lens);
+Most users interact with Arch-Lens through [`arch-lens-cli`](https://www.npmjs.com/package/arch-lens-cli);
 this package is the programmatic core.
 
 ```ts

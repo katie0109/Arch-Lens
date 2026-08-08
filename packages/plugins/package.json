@@ -1,6 +1,6 @@
 {
   "name": "arch-lens-plugin-kit",
-  "version": "0.1.0-beta.2",
+  "version": "0.1.0-beta.3",
   "description": "Plugin helpers and shared contracts for Arch-Lens rules.",
   "type": "module",
   "main": "dist/index.js",

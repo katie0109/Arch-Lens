@@ -23,7 +23,7 @@ $ echo $?
 ```
 
 > [!IMPORTANT]
-> 첫 공식 npm 베타는 `arch-lens`라는 이름으로 배포 준비 중입니다. npm의 `@arch-lens/cli`와 `@arch-lens/core`는 이 프로젝트와 관계없는 패키지이므로 설치하지 마세요. 실제 게시 전까지는 이 저장소를 체크아웃해 실행할 수 있습니다.
+> 공식 npm CLI 패키지 이름은 `arch-lens-cli`이고 실행 명령은 `arch-lens`입니다. npm의 `arch-lens`, `@arch-lens/cli`, `@arch-lens/core`는 이 프로젝트와 관계없는 패키지이므로 설치하지 마세요.
 
 ---
 
@@ -141,7 +141,7 @@ interface ArchitectureGraph {
 규칙별로 `off`, `warn`, `error`와 options를 지정합니다. warning만 있으면 CI는 통과하고 error가 하나라도 있으면 종료 코드 1을 반환합니다.
 
 ```ts
-import type { ArchLensConfig } from 'arch-lens';
+import type { ArchLensConfig } from 'arch-lens-cli';
 
 const config: ArchLensConfig = {
   include: ['src/**/*.{ts,tsx}'],
@@ -191,7 +191,7 @@ arch-lens scan --report sarif > arch-lens.sarif
 
 | 패키지 | 역할 |
 | --- | --- |
-| `arch-lens` | `init`, `scan`, `baseline`, watch와 CLI lifecycle |
+| `arch-lens-cli` | `init`, `scan`, `baseline`, watch와 CLI lifecycle |
 | `arch-lens-core` | config, file scan, dependency graph, orchestrator, reporter |
 | `arch-lens-rules` | 공통 Rule/Graph 타입과 내장 규칙 8종 |
 | `arch-lens-plugin-kit` | `createRule`, `definePlugin`, 실행형 규칙 예제 |
@@ -216,7 +216,15 @@ examples/
 
 ## 실행하기
 
-공식 npm 배포 전까지 저장소에서 다음과 같이 실행합니다.
+npm 베타 패키지를 개발 의존성으로 설치합니다. 패키지 이름과 실행 명령이 다른 점에 유의하세요.
+
+```bash
+pnpm add -D arch-lens-cli@beta
+pnpm exec arch-lens init --config arch.config.ts
+pnpm exec arch-lens scan
+```
+
+저장소에서 직접 개발하거나 예제를 실행하려면 다음 명령을 사용합니다.
 
 ```bash
 git clone https://github.com/katie0109/Arch-Lens.git
@@ -234,10 +242,10 @@ node packages/cli/dist/index.js scan examples/monorepo-sample/src \
 설정 파일 생성과 기본 워크플로:
 
 ```bash
-pnpm --filter arch-lens exec arch-lens init --config arch.config.ts
-pnpm --filter arch-lens exec arch-lens scan
-pnpm --filter arch-lens exec arch-lens scan --fix
-pnpm --filter arch-lens exec arch-lens scan --watch
+pnpm --filter arch-lens-cli exec arch-lens init --config arch.config.ts
+pnpm --filter arch-lens-cli exec arch-lens scan
+pnpm --filter arch-lens-cli exec arch-lens scan --fix
+pnpm --filter arch-lens-cli exec arch-lens scan --watch
 ```
 
 대표 예제를 한 번에 실행할 수도 있습니다.
@@ -327,7 +335,7 @@ bash scripts/consumer-smoke.sh
 - **baseline은 rule + file별 개수 기반입니다.** 라인 이동과 메시지 변경에는 강하지만 개별 위반 identity를 완전히 추적하지는 않습니다.
 - **benchmark는 엔진 in-process 측정입니다.** 실제 CLI 성능에는 Node startup과 config/plugin loading 시간이 추가됩니다.
 
-다음 마일스톤은 첫 npm 베타 게시, 플러그인 실행 timeout/격리, symbol graph 확장, true affected execution입니다.
+다음 마일스톤은 플러그인 실행 timeout/격리, symbol graph 확장, true affected execution입니다.
 
 ---
 
