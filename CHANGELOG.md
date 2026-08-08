@@ -4,6 +4,13 @@ All notable changes to Arch-Lens are documented here. The format is based on
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the project aims to follow
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Fixed
+
+- Added bounded npm registry propagation retries after publication so a newly created scoped
+  package is not reported as failed while the public registry metadata is still becoming visible.
+
 ## [0.1.0-beta.4] - 2026-08-08
 
 First complete branded npm beta under the `@moth-tools` organization. The package scope prevents

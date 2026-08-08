@@ -18,6 +18,8 @@ fi
 
 DRY_RUN=${DRY_RUN:-true}
 DIST_TAG=${DIST_TAG:-beta}
+PUBLISH_VERIFY_ATTEMPTS=${PUBLISH_VERIFY_ATTEMPTS:-24}
+PUBLISH_VERIFY_DELAY_SECONDS=${PUBLISH_VERIFY_DELAY_SECONDS:-5}
 EXPECTED_REPOSITORY="github.com/katie0109/Arch-Lens"
 NPM_USER=""
 if [[ "${1:-}" == "--publish" ]]; then
@@ -119,7 +121,7 @@ package_is_already_published() {
   local status
 
   set +e
-  output=$(npm view "$spec" version repository.url maintainers.name --json 2>&1)
+  output=$(npm view "$spec" version repository.url maintainers.name --json --prefer-online 2>&1)
   status=$?
   set -e
 
@@ -142,6 +144,32 @@ package_is_already_published() {
   echo "[release] Could not query $spec from npm:" >&2
   echo "$output" >&2
   return 2
+}
+
+confirm_package_is_published() {
+  local pkg="$1"
+  local version="$2"
+  local attempt
+  local lookup_status
+
+  for ((attempt = 1; attempt <= PUBLISH_VERIFY_ATTEMPTS; attempt++)); do
+    if package_is_already_published "$pkg" "$version"; then
+      return 0
+    else
+      lookup_status=$?
+    fi
+
+    if [[ $lookup_status -ne 1 ]]; then
+      return "$lookup_status"
+    fi
+
+    if [[ $attempt -lt $PUBLISH_VERIFY_ATTEMPTS ]]; then
+      echo "[release] Waiting for npm registry propagation: $pkg@$version ($attempt/$PUBLISH_VERIFY_ATTEMPTS)"
+      sleep "$PUBLISH_VERIFY_DELAY_SECONDS"
+    fi
+  done
+
+  return 1
 }
 
 registry_dist_tag() {
@@ -254,7 +282,7 @@ for ws in "${WORKSPACES[@]}"; do
   publish_package "$ws"
 
   if [[ "$DRY_RUN" == false ]]; then
-    if ! package_is_already_published "$ws" "$(package_version "$ws")"; then
+    if ! confirm_package_is_published "$ws" "$(package_version "$ws")"; then
       echo "[release] Verification failed: $ws was not confirmed in the npm registry." >&2
       exit 1
     fi
@@ -267,7 +295,7 @@ done
 
 if [[ "$DRY_RUN" == false ]]; then
   for ws in "${WORKSPACES[@]}"; do
-    if ! package_is_already_published "$ws" "$(package_version "$ws")"; then
+    if ! confirm_package_is_published "$ws" "$(package_version "$ws")"; then
       echo "[release] Verification failed: $ws was not confirmed in the npm registry." >&2
       exit 1
     fi
