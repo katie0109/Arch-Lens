@@ -9,7 +9,7 @@ CLI_BIN="${REPO_DIR}/packages/cli/dist/index.js"
 
 if [ ! -f "$CLI_BIN" ]; then
   echo "[Arch-Lens] Building CLI..."
-  pnpm --filter arch-lens build >/dev/null
+  pnpm --filter arch-lens-cli build >/dev/null
 fi
 
 WORK="$(mktemp -d)"

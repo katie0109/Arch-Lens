@@ -1,6 +1,6 @@
 {
   "name": "arch-lens-rules",
-  "version": "0.1.0-beta.2",
+  "version": "0.1.0-beta.3",
   "description": "Built-in rules and rule type definitions for Arch-Lens.",
   "type": "module",
   "main": "dist/index.js",

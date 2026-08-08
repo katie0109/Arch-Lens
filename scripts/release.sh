@@ -28,7 +28,7 @@ declare -a WORKSPACES=(
   "arch-lens-rules"
   "arch-lens-core"
   "arch-lens-plugin-kit"
-  "arch-lens"
+  "arch-lens-cli"
 )
 
 package_directory() {
@@ -36,7 +36,7 @@ package_directory() {
     arch-lens-rules) echo "packages/rules" ;;
     arch-lens-core) echo "packages/core" ;;
     arch-lens-plugin-kit) echo "packages/plugins" ;;
-    arch-lens) echo "packages/cli" ;;
+    arch-lens-cli) echo "packages/cli" ;;
     *)
       echo "[release] Unknown workspace package: $1" >&2
       return 1
@@ -144,6 +144,68 @@ package_is_already_published() {
   return 2
 }
 
+registry_dist_tag() {
+  local pkg="$1"
+  local tag="$2"
+  local output
+
+  if ! output=$(npm view "$pkg" "dist-tags.${tag}" --json 2>/dev/null); then
+    return 1
+  fi
+
+  if [[ -z "$output" || "$output" == "null" ]]; then
+    return 1
+  fi
+
+  node -e '
+    const value = JSON.parse(process.argv[1]);
+    if (typeof value !== "string" || value.length === 0) process.exit(1);
+    process.stdout.write(value);
+  ' "$output"
+}
+
+normalize_dist_tags() {
+  local pkg="$1"
+  local version="$2"
+  local tagged_version=""
+  local latest_version=""
+
+  tagged_version=$(registry_dist_tag "$pkg" "$DIST_TAG") || true
+  if [[ "$tagged_version" != "$version" ]]; then
+    echo "[release] Setting $pkg@$version as dist-tag $DIST_TAG"
+    npm dist-tag add "${pkg}@${version}" "$DIST_TAG"
+  fi
+
+  if [[ "$version" == *-* && "$DIST_TAG" != "latest" ]]; then
+    latest_version=$(registry_dist_tag "$pkg" latest) || true
+    if [[ -n "$latest_version" ]]; then
+      echo "[release] Removing unintended latest tag from $pkg (was $latest_version)"
+      npm dist-tag rm "$pkg" latest
+    fi
+  fi
+}
+
+verify_dist_tags() {
+  local pkg="$1"
+  local version="$2"
+  local tagged_version=""
+  local latest_version=""
+
+  tagged_version=$(registry_dist_tag "$pkg" "$DIST_TAG") || true
+  if [[ "$tagged_version" != "$version" ]]; then
+    echo "[release] Verification failed: $pkg dist-tag $DIST_TAG is '${tagged_version:-missing}', expected $version." >&2
+    return 1
+  fi
+
+  if [[ "$version" == *-* && "$DIST_TAG" != "latest" ]]; then
+    latest_version=$(registry_dist_tag "$pkg" latest) || true
+    if [[ -n "$latest_version" ]]; then
+      echo "[release] Verification failed: prerelease $pkg still has latest -> $latest_version." >&2
+      return 1
+    fi
+  fi
+}
+
 validate_release_metadata
 if [[ "$DRY_RUN" == false ]]; then
   preflight_real_publish
@@ -198,6 +260,16 @@ publish_package() {
 
 for ws in "${WORKSPACES[@]}"; do
   publish_package "$ws"
+
+  if [[ "$DRY_RUN" == false ]]; then
+    if ! package_is_already_published "$ws" "$(package_version "$ws")"; then
+      echo "[release] Verification failed: $ws was not confirmed in the npm registry." >&2
+      exit 1
+    fi
+    normalize_dist_tags "$ws" "$(package_version "$ws")"
+    verify_dist_tags "$ws" "$(package_version "$ws")"
+  fi
+
   echo
 done
 
@@ -207,6 +279,7 @@ if [[ "$DRY_RUN" == false ]]; then
       echo "[release] Verification failed: $ws was not confirmed in the npm registry." >&2
       exit 1
     fi
+    verify_dist_tags "$ws" "$(package_version "$ws")"
   done
 fi
 

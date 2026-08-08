@@ -105,7 +105,7 @@ arch-lens scan src \
 `plugins` 배열로 선언하고, 규칙은 `rules` 맵에서 **id로 활성화**합니다. 심각도(`off`/`warn`/`error`)와 옵션도 여기서 지정합니다.
 
 ```ts
-import type { ArchLensConfig } from 'arch-lens';
+import type { ArchLensConfig } from 'arch-lens-cli';
 
 const config: ArchLensConfig = {
   plugins: ['@your-scope/arch-rules'],
