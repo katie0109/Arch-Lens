@@ -1,6 +1,6 @@
 {
-  "name": "@arch-lens/core",
-  "version": "0.1.0-beta.1",
+  "name": "arch-lens-core",
+  "version": "0.1.0-beta.2",
   "description": "Core engine for Arch-Lens rule orchestration.",
   "type": "module",
   "main": "dist/index.js",
@@ -30,7 +30,7 @@
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
-    "@arch-lens/rules": "workspace:*",
+    "arch-lens-rules": "workspace:*",
     "fast-glob": "^3.3.2",
     "jiti": "^2.7.0",
     "typescript": "^5.4.0"
@@ -46,7 +46,8 @@
   ],
   "license": "MIT",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "tag": "beta"
   },
   "repository": {
     "type": "git",

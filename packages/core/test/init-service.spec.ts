@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { initializeProject } from '../src/init/init-service.js';
 
-// The scaffolded config imports '@arch-lens/rules', so the workspace must live inside the
+// The scaffolded config imports 'arch-lens', so the workspace must live inside the
 // repo for Node's upward node_modules resolution to find the workspace links.
 const scratchRoot = join(process.cwd(), '.e2e-workspaces');
 

@@ -1,6 +1,6 @@
 {
-  "name": "@arch-lens/cli",
-  "version": "0.1.0-beta.1",
+  "name": "arch-lens",
+  "version": "0.1.0-beta.2",
   "description": "Command line interface for Arch-Lens.",
   "type": "module",
   "bin": {
@@ -33,8 +33,8 @@
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
-    "@arch-lens/core": "workspace:*",
-    "@arch-lens/rules": "workspace:*",
+    "arch-lens-core": "workspace:*",
+    "arch-lens-rules": "workspace:*",
     "cac": "^6.7.14",
     "chokidar": "^3.6.0"
   },
@@ -49,7 +49,8 @@
   ],
   "license": "MIT",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "tag": "beta"
   },
   "repository": {
     "type": "git",

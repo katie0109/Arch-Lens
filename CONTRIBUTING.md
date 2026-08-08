@@ -42,7 +42,7 @@
 - 유닛 테스트: `pnpm test` (Vitest 기반)
 - 린트: `pnpm lint`
 - 타입 검사: `pnpm typecheck`
-- 필요한 경우 특정 패키지만 테스트하려면 `pnpm --filter @arch-lens/rules test` 같은 workspace 필터를 사용하세요.
+- 필요한 경우 특정 패키지만 테스트하려면 `pnpm --filter arch-lens-rules test` 같은 workspace 필터를 사용하세요.
 - 규칙 관련 테스트는 `packages/rules/test` 폴더에 저장하며, `memfs` 또는 샘플 그래프를 활용해 재현성을 확보합니다.
 
 ---
@@ -71,4 +71,3 @@
 - 예제 코드/스크린샷/다이어그램 등의 에셋은 `docs/assets`(필요 시 생성)에 저장합니다.
 
 ---
-

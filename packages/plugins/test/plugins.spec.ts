@@ -29,11 +29,11 @@ describe('plugin SDK', () => {
     };
 
     const plugin = definePlugin({
-      meta: { name: '@arch-lens/sample', version: '0.0.0' },
+      meta: { name: 'arch-lens-sample', version: '0.0.0' },
       rules: [rule],
     });
 
-    expect(plugin.meta.name).toBe('@arch-lens/sample');
+    expect(plugin.meta.name).toBe('arch-lens-sample');
     expect(plugin.rules).toHaveLength(1);
   });
 

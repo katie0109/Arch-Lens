@@ -12,7 +12,7 @@ export const repoRoot = resolve(here, '../../../..');
 export const cliEntry = resolve(repoRoot, 'packages/cli/dist/index.js');
 
 /**
- * Scratch projects live *inside* the repo so that a bare `import '@arch-lens/rules'`
+ * Scratch projects live *inside* the repo so that a bare `import 'arch-lens-rules'`
  * inside a generated config resolves via upward node_modules lookup to the workspace links.
  */
 export const tmpRoot = resolve(repoRoot, '.e2e-workspaces');
@@ -78,7 +78,7 @@ export function writeConfig(dir: string, ruleIds?: string[]): void {
   writeFile(
     dir,
     'arch.config.mjs',
-    `import { loadBuiltInRules } from '@arch-lens/rules';
+    `import { loadBuiltInRules } from 'arch-lens-rules';
 
 export default {
   root: ${JSON.stringify(root)},

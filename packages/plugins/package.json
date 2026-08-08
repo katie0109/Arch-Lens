@@ -1,6 +1,6 @@
 {
-  "name": "@arch-lens/plugins",
-  "version": "0.1.0-beta.1",
+  "name": "arch-lens-plugin-kit",
+  "version": "0.1.0-beta.2",
   "description": "Plugin helpers and shared contracts for Arch-Lens rules.",
   "type": "module",
   "main": "dist/index.js",
@@ -30,7 +30,7 @@
     "prepublishOnly": "pnpm run build"
   },
   "dependencies": {
-    "@arch-lens/rules": "workspace:*"
+    "arch-lens-rules": "workspace:*"
   },
   "devDependencies": {
     "rimraf": "^5.0.5"
@@ -42,7 +42,8 @@
   ],
   "license": "MIT",
   "publishConfig": {
-    "access": "public"
+    "access": "public",
+    "tag": "beta"
   },
   "repository": {
     "type": "git",

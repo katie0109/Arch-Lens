@@ -7,7 +7,7 @@ Arch-Lens는 **설정 파일 하나**로 팀의 구조/의존성 규칙을 검�
 ## 1. 설치
 
 ```bash
-pnpm add -D @arch-lens/cli @arch-lens/core @arch-lens/rules
+pnpm add -D arch-lens@beta
 # npm 또는 yarn 환경이라면 동일 패키지를 devDependencies에 추가하세요.
 ```
 
@@ -18,7 +18,7 @@ pnpm add -D @arch-lens/cli @arch-lens/core @arch-lens/rules
 ## 2. 설정 파일 생성
 
 ```bash
-pnpm --filter @arch-lens/cli exec arch-lens init --config arch.config.ts
+pnpm exec arch-lens init --config arch.config.ts
 ```
 
 - `arch.config.ts`가 **ESLint식 rules 맵** 형태로 생성됩니다(규칙 id에 `off`/`warn`/`error`).
@@ -30,16 +30,16 @@ pnpm --filter @arch-lens/cli exec arch-lens init --config arch.config.ts
 
 ```bash
 # 규칙 검사
-pnpm --filter @arch-lens/cli exec arch-lens scan
+pnpm exec arch-lens scan
 
 # auto-fix
-pnpm --filter @arch-lens/cli exec arch-lens scan --fix
+pnpm exec arch-lens scan --fix
 
 # report/metrics/watch 옵션
-pnpm --filter @arch-lens/cli exec arch-lens scan --report json --pretty
-pnpm --filter @arch-lens/cli exec arch-lens scan --report sarif > arch-lens.sarif
-pnpm --filter @arch-lens/cli exec arch-lens scan --metrics ./metrics.json
-pnpm --filter @arch-lens/cli exec arch-lens scan --watch
+pnpm exec arch-lens scan --report json --pretty
+pnpm exec arch-lens scan --report sarif > arch-lens.sarif
+pnpm exec arch-lens scan --metrics ./metrics.json
+pnpm exec arch-lens scan --watch
 ```
 
 리포트 형식은 `table`·`list`·`json`·`html`·`markdown`·`sarif`(GitHub Code Scanning)를 지원합니다.
@@ -53,7 +53,7 @@ pnpm --filter @arch-lens/cli exec arch-lens scan --watch
 `arch.config.ts`의 `rules` 맵에서 규칙 id별로 심각도(`off`/`warn`/`error`)와 옵션(`[severity, options]`)을 지정합니다. `plugins` 배열로 npm/로컬 플러그인을 선언하면 그 규칙도 id로 활성화됩니다.
 
 ```ts
-import type { ArchLensConfig } from '@arch-lens/core';
+import type { ArchLensConfig } from 'arch-lens';
 
 const config: ArchLensConfig = {
   plugins: ['@your-scope/arch-rules'],

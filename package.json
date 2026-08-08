@@ -1,7 +1,7 @@
 {
   "name": "arch-lens-monorepo",
   "private": true,
-  "version": "0.1.0-beta.1",
+  "version": "0.1.0-beta.2",
   "description": "Arch-Lens monorepo workspace for CLI, core engine, rules, and plugins.",
   "license": "MIT",
   "packageManager": "pnpm@8.15.4",
@@ -16,9 +16,9 @@
     "bench": "node scripts/bench.mjs"
   },
   "devDependencies": {
-    "@arch-lens/plugins": "workspace:*",
-    "@arch-lens/core": "workspace:*",
-    "@arch-lens/rules": "workspace:*",
+    "arch-lens-plugin-kit": "workspace:*",
+    "arch-lens-core": "workspace:*",
+    "arch-lens-rules": "workspace:*",
     "@types/node": "^20.11.30",
     "@typescript-eslint/eslint-plugin": "^7.0.0",
     "@typescript-eslint/parser": "^7.0.0",

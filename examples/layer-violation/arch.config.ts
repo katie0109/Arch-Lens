@@ -1,4 +1,4 @@
-import type { ArchLensConfig } from '@arch-lens/core';
+import type { ArchLensConfig } from 'arch-lens-core';
 
 // Options are passed to the rule via the [severity, options] tuple in the map.
 const config: ArchLensConfig = {

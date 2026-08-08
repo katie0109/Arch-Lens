@@ -2,7 +2,7 @@ import { mkdtemp, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-import type { ArchLensRule, RuleContext } from '@arch-lens/rules';
+import type { ArchLensRule, RuleContext } from 'arch-lens-rules';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { ArchLensOrchestrator } from '../src/orchestrator/index.js';

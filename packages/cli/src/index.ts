@@ -6,6 +6,8 @@ import { registerInitCommand } from './commands/init.js';
 import { registerScanCommand } from './commands/scan.js';
 import { getPackageInfo } from './utils/package-info.js';
 
+export type { ArchLensConfig } from 'arch-lens-core';
+
 const cli = cac('arch-lens');
 
 registerScanCommand(cli);
